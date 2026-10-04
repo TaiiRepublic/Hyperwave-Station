@@ -1,0 +1,1361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hyperwave Chat</title>
+<meta name="description" content="Free multi-platform chat overlay for OBS. Twitch, Kick, YouTube and TikTok in one feed, with Matrix rain, scrolling and floating modes, bubbles, profile pictures and full style controls.">
+<meta property="og:title" content="Hyperwave Chat">
+<meta property="og:description" content="Free multi-platform chat overlay for OBS. Matrix rain, scrolling chat, bubbles, profile pictures and full style controls.">
+<meta name="theme-color" content="#C8283C">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+/* =================== OVERLAY =================== */
+:root{
+  --col-twitch:#9146FF; --col-youtube:#FF0033; --col-kick:#53FC18; --col-tiktok:#25F4EE;
+  --ink-twitch:#fff; --ink-youtube:#fff; --ink-kick:#101114; --ink-tiktok:#101114;
+  --font-msg:'Inter',sans-serif; --font-name:'Chakra Petch',sans-serif;
+  --fs:20px; --ns:1; --fw-name:700; --fw-msg:500; --lh:1.35; --ls:0px;
+  --text:#ECE6DA; --bg:rgba(20,13,17,.72); --blur:0px; --radius:3px; --bw:3px; --bc:#C8283C;
+  --px:12px; --py:7px; --gap:6px; --maxw:100%; --es:1.6; --anim-ms:400ms; --tsh:none;
+  --hi:rgba(242,163,58,.22); --hi-edge:#F2A33A; --as:1.4; --ar:50%;
+  --box-x:1.5%; --box-y:33%; --box-w:26%; --box-h:64%; --cpad:8px;
+}
+html,body{margin:0;padding:0}
+body.overlay{background:transparent;overflow:hidden}
+body.cfg #chat, body.cfg #ovStatus, body.cfg #rainCanvas, #app[hidden], #ovStatus[hidden], #rainCanvas[hidden]{display:none!important}
+
+#rainCanvas{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:0}
+#rainCanvas.in-box{left:var(--box-x);top:var(--box-y);width:var(--box-w);height:var(--box-h)}
+#chat{position:fixed;left:var(--box-x);top:var(--box-y);width:var(--box-w);height:var(--box-h);z-index:1;box-sizing:border-box;padding:var(--cpad);display:flex;flex-direction:column;
+  justify-content:flex-end;gap:var(--gap);overflow:hidden;font-size:var(--fs)}
+#chat.dir-top{justify-content:flex-start}
+#chat.al-left{align-items:flex-start}
+#chat.al-right{align-items:flex-end}
+#chat.al-full{align-items:stretch}
+#chat.mode-flow{display:block;padding:0}
+#chat.mode-flow .m{position:absolute;left:0;top:0;will-change:transform,opacity}
+#chat.nowrap .m{white-space:nowrap;max-width:none}
+
+.m{flex:0 0 auto;box-sizing:border-box;max-width:var(--maxw);position:relative;
+  background-color:var(--bg);backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));
+  border-radius:var(--radius);padding:var(--py) var(--px);color:var(--text);
+  font-family:var(--font-msg);font-weight:var(--fw-msg);font-size:1em;line-height:var(--lh);
+  letter-spacing:var(--ls);text-shadow:var(--tsh);overflow-wrap:anywhere;word-break:break-word;
+  --pc:var(--col-twitch);--pi:var(--ink-twitch);--edge:var(--bc)}
+.p-youtube{--pc:var(--col-youtube);--pi:var(--ink-youtube)}
+.p-kick{--pc:var(--col-kick);--pi:var(--ink-kick)}
+.p-tiktok{--pc:var(--col-tiktok);--pi:var(--ink-tiktok)}
+#chat.accent .m{--edge:var(--pc)}
+#chat.b-side .m{border-left:var(--bw) solid var(--edge)}
+#chat.al-right.b-side .m{border-left:0;border-right:var(--bw) solid var(--edge)}
+#chat.b-all .m{border:var(--bw) solid var(--edge)}
+#chat.b-bottom .m{border-bottom:var(--bw) solid var(--edge)}
+#chat.al-right .m{text-align:right}
+
+/* bubble shapes */
+#chat.shape-pill .m{border-radius:1.5em;padding-left:calc(var(--px) + .35em);padding-right:calc(var(--px) + .35em)}
+#chat.shape-speech .m{margin-bottom:.5em}
+#chat.shape-speech .m::after{content:'';position:absolute;top:100%;left:1.1em;border:.5em solid transparent;
+  border-top-color:var(--bg);border-bottom:0;border-left-width:.2em}
+#chat.shape-speech.al-right .m::after{left:auto;right:1.1em;border-left-width:.5em;border-right-width:.2em}
+#chat.shape-cut .m{border-radius:0;clip-path:polygon(.7em 0,100% 0,100% calc(100% - .7em),calc(100% - .7em) 100%,0 100%,0 .7em)}
+#chat.shine .m{background-image:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0) 62%)}
+#chat .m.hi{--edge:var(--hi-edge);background-image:linear-gradient(var(--hi),var(--hi))}
+
+.meta{white-space:normal}
+#chat.nowrap .meta{white-space:nowrap}
+#chat.lay-inline .meta{display:inline;margin-right:.35em}
+#chat.lay-stacked .meta{display:flex;align-items:center;flex-wrap:wrap;margin-bottom:.12em}
+#chat.lay-stacked.al-right .meta{justify-content:flex-end}
+#chat.lay-stacked .sep{display:none}
+#chat.lay-stacked .body{display:block}
+
+.name{font-family:var(--font-name);font-weight:var(--fw-name);font-size:calc(1em * var(--ns))}
+.name.tag{padding:.06em .45em .1em;border-radius:.35em;text-shadow:none;display:inline-block;line-height:1.25}
+#chat.upper .name{text-transform:uppercase}
+.sep{font-weight:var(--fw-name)}
+.pl{display:inline-block;font-family:var(--font-name);font-weight:700;font-size:.6em;line-height:1;
+  padding:.32em .5em .3em;border-radius:3px;background:var(--pc);color:var(--pi);text-shadow:none;
+  vertical-align:.22em;margin-right:.5em;letter-spacing:.03em}
+.pd{display:inline-block;width:.55em;height:.55em;border-radius:50%;background:var(--pc);
+  margin-right:.45em;vertical-align:.08em;box-shadow:0 0 0 2px rgba(0,0,0,.25)}
+.ts{opacity:.65;font-size:.72em;margin-right:.45em;font-variant-numeric:tabular-nums}
+.bd{height:1.05em;width:auto;vertical-align:-.16em;margin-right:.25em}
+.em{height:calc(1em * var(--es));width:auto;vertical-align:middle;margin:-.25em .06em}
+.m.big .em{height:calc(2em * var(--es));margin:.05em .08em}
+.emoji{height:1.15em;width:1.15em;vertical-align:-.22em;margin:0 .04em}
+
+/* profile pictures */
+.av,.avi{width:calc(1em * var(--as));height:calc(1em * var(--as));border-radius:var(--ar);flex:0 0 auto;
+  vertical-align:middle;margin-right:.4em;box-sizing:border-box}
+.av{object-fit:cover;display:inline-block}
+.avi{display:inline-flex;align-items:center;justify-content:center;text-shadow:none;font-family:var(--font-name);font-weight:700;overflow:hidden}
+.avi b{font-size:calc(.48em * var(--as));line-height:1}
+.m.side{display:flex;gap:.55em;align-items:flex-start}
+#chat.al-right .m.side{flex-direction:row-reverse}
+.m.side>.av,.m.side>.avi{margin:0}
+.m.side>.content{min-width:0;flex:1 1 auto}
+
+/* entrances */
+@keyframes in-slideL{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:none}}
+@keyframes in-slideR{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:none}}
+@keyframes in-up{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
+@keyframes in-down{from{opacity:0;transform:translateY(-30px)}to{opacity:1;transform:none}}
+@keyframes in-fade{from{opacity:0}to{opacity:1}}
+@keyframes in-pop{0%{opacity:0;transform:scale(.8)}70%{opacity:1;transform:scale(1.04)}100%{transform:none}}
+@keyframes in-zoom{from{opacity:0;transform:scale(1.7)}to{opacity:1;transform:none}}
+@keyframes in-bounce{0%{opacity:0;transform:translateY(40px)}55%{opacity:1;transform:translateY(-10px)}75%{transform:translateY(4px)}90%{transform:translateY(-2px)}100%{transform:none}}
+@keyframes in-elasticL{0%{opacity:0;transform:translateX(-90px) scaleX(1.45)}50%{opacity:1;transform:translateX(10px) scaleX(.9)}70%{transform:translateX(-5px) scaleX(1.04)}85%{transform:translateX(2px)}100%{transform:none}}
+@keyframes in-elasticR{0%{opacity:0;transform:translateX(90px) scaleX(1.45)}50%{opacity:1;transform:translateX(-10px) scaleX(.9)}70%{transform:translateX(5px) scaleX(1.04)}85%{transform:translateX(-2px)}100%{transform:none}}
+@keyframes in-flip{0%{opacity:0;transform:perspective(600px) rotateX(-90deg)}60%{opacity:1;transform:perspective(600px) rotateX(14deg)}80%{transform:perspective(600px) rotateX(-5deg)}100%{transform:perspective(600px) rotateX(0)}}
+@keyframes in-swingL{0%{opacity:0;transform:perspective(700px) rotateY(-85deg)}65%{opacity:1;transform:perspective(700px) rotateY(12deg)}85%{transform:perspective(700px) rotateY(-4deg)}100%{transform:perspective(700px) rotateY(0)}}
+@keyframes in-swingR{0%{opacity:0;transform:perspective(700px) rotateY(85deg)}65%{opacity:1;transform:perspective(700px) rotateY(-12deg)}85%{transform:perspective(700px) rotateY(4deg)}100%{transform:perspective(700px) rotateY(0)}}
+@keyframes in-spin{from{opacity:0;transform:rotate(-200deg) scale(.3)}to{opacity:1;transform:none}}
+@keyframes in-blur{from{opacity:0;filter:blur(14px);transform:scale(1.08)}to{opacity:1;filter:blur(0);transform:none}}
+@keyframes in-glitch{0%{opacity:0;transform:translateX(-14px);clip-path:inset(42% 0 42% 0)}15%{opacity:1;transform:translateX(12px);clip-path:inset(8% 0 62% 0)}30%{transform:translateX(-8px);clip-path:inset(70% 0 6% 0)}45%{transform:translateX(6px);clip-path:inset(20% 0 35% 0)}60%{transform:translateX(-3px);clip-path:inset(55% 0 12% 0)}75%{transform:translateX(2px);clip-path:inset(0 0 0 0)}100%{opacity:1;transform:none;clip-path:inset(0 0 0 0)}}
+@keyframes in-typeL{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes in-typeR{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0 0 0 0)}}
+@keyframes in-wipe{from{clip-path:inset(100% 0 0 0);transform:translateY(12px)}to{clip-path:inset(0 0 0 0);transform:none}}
+@keyframes in-warpL{0%{opacity:0;transform:translateX(-140%) scaleX(2.6);filter:blur(6px)}60%{opacity:1;transform:translateX(3%) scaleX(.96);filter:blur(0)}100%{transform:none}}
+@keyframes in-warpR{0%{opacity:0;transform:translateX(140%) scaleX(2.6);filter:blur(6px)}60%{opacity:1;transform:translateX(-3%) scaleX(.96);filter:blur(0)}100%{transform:none}}
+@keyframes in-jelly{0%{opacity:0;transform:scale(.6)}30%{opacity:1;transform:scale(1.15,.85)}45%{transform:scale(.9,1.1)}60%{transform:scale(1.05,.95)}75%{transform:scale(.98,1.02)}100%{transform:none}}
+@keyframes in-unfold{0%{opacity:0;transform:scaleY(0)}60%{opacity:1;transform:scaleY(1.06)}100%{transform:none}}
+@keyframes in-flicker{0%{opacity:0}8%{opacity:.85}14%{opacity:.1}24%{opacity:1}30%{opacity:.2}44%{opacity:1}50%{opacity:.45}60%,100%{opacity:1}}
+@keyframes in-slam{0%{opacity:0;transform:scale(2.4)}50%{opacity:1;transform:scale(.94)}62%{transform:scale(1) translateX(-5px)}74%{transform:translateX(5px)}86%{transform:translateX(-2px)}100%{transform:none}}
+/* exits */
+@keyframes out-fade{to{opacity:0}}
+@keyframes out-slideL{to{opacity:0;transform:translateX(-70px)}}
+@keyframes out-slideR{to{opacity:0;transform:translateX(70px)}}
+@keyframes out-shrink{to{opacity:0;transform:scale(.55)}}
+@keyframes out-drop{to{opacity:0;transform:translateY(34px)}}
+@keyframes out-up{to{opacity:0;transform:translateY(-34px)}}
+@keyframes out-blur{to{opacity:0;filter:blur(12px)}}
+@keyframes out-warpL{to{opacity:0;transform:translateX(-140%) scaleX(2.4);filter:blur(5px)}}
+@keyframes out-warpR{to{opacity:0;transform:translateX(140%) scaleX(2.4);filter:blur(5px)}}
+
+#ovStatus{position:fixed;left:8px;top:8px;font:600 12px/1.3 system-ui,sans-serif;color:#fff;
+  background:rgba(0,0,0,.6);padding:4px 8px;border-radius:4px;z-index:5}
+
+/* =================== SETTINGS PAGE =================== */
+body.cfg{
+  --hull:#16181D; --plate:#1E2127; --plate2:#282C34; --line:#353A45;
+  --ink:#ECE6DA; --dim:#9EA4AE; --crimson:#C8283C; --amber:#F2A33A; --cyan:#57D3E2;
+  background:var(--hull);color:var(--ink);font:15px/1.5 'Inter',system-ui,sans-serif;
+}
+body.cfg a{color:var(--amber)}
+#app{display:grid;grid-template-columns:minmax(330px,410px) 1fr;height:100vh}
+#panel{overflow-y:auto;background:var(--plate);border-right:1px solid var(--line)}
+.brand{padding:22px 22px 18px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center}
+.brand .mark{width:40px;height:40px;flex:0 0 auto;position:relative}
+.brand .mark i{position:absolute;left:0;right:0;height:3px;border-radius:2px;background:var(--crimson)}
+.brand .mark i:nth-child(1){top:9px;transform:skewX(-30deg);width:70%}
+.brand .mark i:nth-child(2){top:18px;background:var(--amber)}
+.brand .mark i:nth-child(3){top:27px;transform:skewX(-30deg);width:85%;margin-left:15%;background:var(--cyan)}
+.brand h1{font:700 22px/1.1 'Chakra Petch',sans-serif;margin:0}
+.brand p{margin:4px 0 0;color:var(--dim);font-size:13.5px;line-height:1.4}
+.brand .credit{font-size:12.5px}
+.presets{padding:16px 22px;border-bottom:1px solid var(--line);display:grid;gap:6px}
+.presets .line{display:flex;gap:8px}
+details.sec{border-bottom:1px solid var(--line)}
+details.sec>summary{list-style:none;cursor:pointer;padding:14px 22px;font:600 15px/1.2 'Chakra Petch',sans-serif;
+  display:flex;align-items:center;gap:10px;user-select:none}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::before{content:'';width:3px;height:15px;background:var(--line);flex:0 0 auto}
+details.sec[open]>summary::before{background:var(--crimson)}
+details.sec>summary::after{content:'+';margin-left:auto;color:var(--dim);font-size:18px;line-height:1}
+details.sec[open]>summary::after{content:'\2013'}
+details.sec>summary:hover{background:var(--plate2)}
+.rows{padding:2px 22px 18px;display:grid;gap:15px}
+.row[hidden],.sec[hidden]{display:none}
+.lbl{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--dim);margin-bottom:5px}
+.lbl output{color:var(--ink);font-variant-numeric:tabular-nums}
+body.cfg input[type=text],body.cfg input[type=password],body.cfg input[type=number],body.cfg select,body.cfg textarea{
+  width:100%;box-sizing:border-box;background:var(--hull);color:var(--ink);border:1px solid var(--line);
+  border-radius:4px;padding:8px 10px;font:inherit;font-size:14px}
+body.cfg textarea{min-height:58px;resize:vertical}
+body.cfg select{cursor:pointer}
+body.cfg input[type=range]{width:100%;accent-color:var(--amber);margin:2px 0}
+.colorrow{display:flex;gap:10px;align-items:center}
+.colorrow code{font-size:13px;color:var(--dim)}
+body.cfg input[type=color]{width:46px;height:32px;border:1px solid var(--line);border-radius:4px;background:var(--hull);padding:2px;cursor:pointer}
+.swatches{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.swatches span{width:20px;height:20px;border-radius:50%;border:1px solid rgba(255,255,255,.25)}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font-size:14px}
+.toggle input{appearance:none;-webkit-appearance:none;width:38px;height:22px;border-radius:11px;background:var(--line);
+  position:relative;flex:0 0 auto;cursor:pointer;margin:0;transition:background .15s}
+.toggle input::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--ink);transition:transform .15s}
+.toggle input:checked{background:var(--crimson)}
+.toggle input:checked::after{transform:translateX(16px)}
+.help{margin:6px 0 0;font-size:12.5px;color:var(--dim);line-height:1.45}
+.steps{margin:0;padding:2px 22px 4px 44px;display:grid;gap:9px;font-size:13.5px;line-height:1.5}
+.steps li::marker{color:var(--amber);font-family:'Chakra Petch',sans-serif;font-weight:700}
+.guide .help{padding:0 22px 16px}
+body.cfg :focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+#stage{display:grid;grid-template-rows:auto 1fr auto;min-width:0;height:100vh}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--plate)}
+.toolbar .grp{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim)}
+.toolbar input[type=number]{width:78px!important;padding:6px 8px!important}
+.toolbar select{width:auto!important;padding:6px 8px!important}
+#statusChips{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.chip{font-size:12.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.chip.ok{color:#86E3AE;border-color:#2C6447}
+.chip.warn{color:var(--amber);border-color:#6E4C1B}
+.viewport{overflow:hidden;display:grid;place-items:center;padding:26px;min-height:300px}
+.frame{position:relative;outline:1px solid rgba(87,211,226,.45);outline-offset:6px}
+.frame iframe{display:block;border:0;background:transparent;transform-origin:0 0;position:absolute;left:0;top:0}
+.frame .dims{position:absolute;left:0;bottom:-30px;font:500 12px 'Chakra Petch',sans-serif;color:var(--cyan);white-space:nowrap}
+.bg-stars{background-color:#0B0D13;background-image:
+  radial-gradient(1px 1px at 22px 34px,rgba(255,255,255,.75),transparent),
+  radial-gradient(1px 1px at 131px 88px,rgba(255,255,255,.55),transparent),
+  radial-gradient(1.6px 1.6px at 205px 160px,rgba(160,228,255,.7),transparent),
+  radial-gradient(1px 1px at 64px 196px,rgba(255,255,255,.45),transparent),
+  radial-gradient(1.3px 1.3px at 172px 22px,rgba(255,214,170,.6),transparent),
+  radial-gradient(ellipse at 80% 10%,rgba(200,40,60,.22),transparent 55%);
+  background-size:240px 240px,240px 240px,240px 240px,240px 240px,240px 240px,100% 100%}
+.bg-dark{background:#202329}
+.bg-light{background:#E9E9EC}
+.bg-green{background:#00B140}
+.bg-check{background:repeating-conic-gradient(#2A2D34 0 25%,#1F2228 0 50%) 0 0/22px 22px}
+.out{border-top:1px solid var(--line);background:var(--plate);padding:14px 20px 16px;display:grid;gap:10px}
+.out .urlline{display:flex;gap:8px}
+.out .urlline input{font-family:Consolas,monospace!important;font-size:12.5px!important}
+.out .btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{background:var(--plate2);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px 14px;
+  font:600 14px/1.2 'Chakra Petch',sans-serif;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--dim)}
+.btn.primary{background:var(--crimson);border-color:var(--crimson);color:#fff}
+.btn.primary:hover{filter:brightness(1.1)}
+.note{font-size:13px;color:var(--amber);margin:0}
+.note[hidden]{display:none}
+.tbtoggle{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--dim);cursor:pointer}
+.tbtoggle input{accent-color:var(--amber);width:16px;height:16px;margin:0}
+.keeppos{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim);cursor:pointer}
+.keeppos input{accent-color:var(--amber);width:16px;height:16px;margin:0}
+#adj{position:absolute;inset:0;pointer-events:none;z-index:2}
+#adj[hidden]{display:none}
+#box{position:absolute;pointer-events:auto;border:2px dashed var(--cyan);background:rgba(87,211,226,.05);cursor:move;box-sizing:border-box;touch-action:none}
+#box:hover,#box.drag,#box:focus-visible{background:rgba(87,211,226,.13);outline:none}
+#box .boxtag{position:absolute;left:0;top:0;background:var(--cyan);color:#0B0D13;font:600 11.5px/1 'Chakra Petch',sans-serif;padding:4px 7px;border-radius:0 0 3px 0;white-space:nowrap;pointer-events:none}
+#box i{position:absolute;width:12px;height:12px;background:var(--cyan);border:2px solid #0B0D13;border-radius:2px;box-sizing:border-box}
+#box i[data-h=nw]{left:-7px;top:-7px;cursor:nwse-resize}
+#box i[data-h=n]{left:calc(50% - 6px);top:-7px;cursor:ns-resize}
+#box i[data-h=ne]{right:-7px;top:-7px;cursor:nesw-resize}
+#box i[data-h=e]{right:-7px;top:calc(50% - 6px);cursor:ew-resize}
+#box i[data-h=se]{right:-7px;bottom:-7px;cursor:nwse-resize}
+#box i[data-h=s]{left:calc(50% - 6px);bottom:-7px;cursor:ns-resize}
+#box i[data-h=sw]{left:-7px;bottom:-7px;cursor:nesw-resize}
+#box i[data-h=w]{left:-7px;top:calc(50% - 6px);cursor:ew-resize}
+.boxgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.boxgrid label{display:block;font-size:12.5px;color:var(--dim);margin-bottom:4px}
+.anchors{display:grid;grid-template-columns:repeat(3,44px);gap:6px;align-items:center}
+.anchors button{height:34px;border-radius:4px;border:1px solid var(--line);background:var(--hull);color:var(--ink);cursor:pointer;font-size:15px}
+.anchors button:hover{border-color:var(--amber);color:var(--amber)}
+.anchorwrap{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+@media (max-width:880px){
+  #app{grid-template-columns:1fr;height:auto}
+  #stage{height:auto;grid-template-rows:auto 70vh auto}
+  #panel{border-right:0;border-bottom:1px solid var(--line)}
+}
+@media (prefers-reduced-motion:reduce){body.cfg *{transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="rainCanvas" hidden></canvas>
+<div id="chat"></div>
+<div id="ovStatus" hidden></div>
+
+<div id="app" hidden>
+  <aside id="panel">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div>
+        <h1>Hyperwave Chat</h1>
+        <p>Every platform's chat in one overlay. Set it up here, then paste the link into OBS.</p>
+        <p class="credit">Made by <a href="https://twitch.tv/taiirepublic" target="_blank" rel="noopener">TaiiRepublic</a>. Free for any streamer to use.</p>
+      </div>
+    </div>
+    <div class="presets">
+      <div class="lbl"><span>Starting style</span></div>
+      <div class="line">
+        <select id="presetSel" aria-label="Starting style"></select>
+        <button class="btn" id="presetApply" type="button">Apply style</button>
+      </div>
+      <label class="keeppos"><input type="checkbox" id="keepPos"> Keep my chat position and size</label>
+      <p class="help">Applies the look, display mode and a matching chat position. Your channels and filters stay as they are.</p>
+    </div>
+    <details class="sec guide" id="guide">
+      <summary>How to set this up</summary>
+      <ol class="steps">
+        <li><b>Twitch</b> works right away. Under Chat sources, leave Twitch on Direct and type your channel name.</li>
+        <li><b>YouTube</b> (and optionally Kick) needs <a href="https://streamer.bot" target="_blank" rel="noopener">Streamer.bot</a>. Connect your accounts there, then open Servers/Clients → WebSocket Server, set Port to 8080, tick Auto Start and click Start. Set those platforms to "Through Streamer.bot" here.</li>
+        <li><b>TikTok</b> needs <a href="https://tikfinity.zerody.one" target="_blank" rel="noopener">TikFinity</a> open and connected to your LIVE. Set TikTok to "Through TikFinity".</li>
+        <li>Pick a starting style and display mode, adjust anything you like, and watch the preview. Send test message adds sample chat.</li>
+        <li>Pick your stream resolution under Screen and position, then drag the dashed chat box in the preview to where chat should sit on your screen. Drag its corners to resize it.</li>
+        <li>Click Copy link. In OBS, add a Browser source, paste it into URL, and set Width and Height to your stream resolution (1920 and 1080 by default). Then right-click the source and choose Transform → Fit to screen.</li>
+        <li>Changed something later? Copy the new link into the same OBS source, then right-click it and choose Refresh.</li>
+      </ol>
+      <p class="help">Your settings live only in your link and this browser. Nothing is sent to anyone else.</p>
+    </details>
+    <div id="controls"></div>
+  </aside>
+
+  <main id="stage">
+    <div class="toolbar">
+      <label class="tbtoggle"><input type="checkbox" id="showArea" checked> Show chat area</label>
+      <label class="tbtoggle"><input type="checkbox" id="snap" checked> Snap to 10 px</label>
+      <div class="grp"><label for="pvBg">Backdrop</label>
+        <select id="pvBg">
+          <option value="stars">Starfield</option><option value="dark">Dark</option>
+          <option value="light">Light</option><option value="green">Green screen</option>
+          <option value="check">Checkerboard</option>
+        </select></div>
+      <button class="btn" id="testOne" type="button">Send test message</button>
+      <button class="btn" id="testMany" type="button">Send 8</button>
+      <button class="btn" id="testClear" type="button">Clear preview</button>
+      <div id="statusChips" aria-live="polite"></div>
+    </div>
+    <div class="viewport bg-stars" id="viewport">
+      <div class="frame" id="frame"><iframe id="pv" title="Overlay preview"></iframe>
+        <div id="adj"><div id="box" tabindex="0" role="group" aria-label="Chat area. Drag to move, drag corners to resize, or use arrow keys. Hold Shift with arrows to resize."><span class="boxtag"></span><i data-h="nw"></i><i data-h="n"></i><i data-h="ne"></i><i data-h="e"></i><i data-h="se"></i><i data-h="s"></i><i data-h="sw"></i><i data-h="w"></i></div></div>
+        <span class="dims" id="dims"></span></div>
+    </div>
+    <div class="out">
+      <div class="lbl"><span>OBS browser source link</span></div>
+      <div class="urlline">
+        <input type="text" id="ovUrl" readonly aria-label="Overlay link">
+        <button class="btn primary" id="copyUrl" type="button">Copy link</button>
+      </div>
+      <p class="note" id="fileNote" hidden>This page is open as a downloaded file. For the most reliable OBS link, open it from its web address instead. If you stay with the file, untick "Local file" in the OBS browser source and paste this link into URL.</p>
+      <div class="btns">
+        <button class="btn" id="openOv" type="button">Open overlay in a new tab</button>
+        <button class="btn" id="savePreset" type="button">Save settings file</button>
+        <button class="btn" id="loadPreset" type="button">Load settings file</button>
+        <button class="btn" id="resetAll" type="button">Reset everything</button>
+        <input type="file" id="loadFile" accept=".json,application/json" hidden>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+'use strict';
+const APP='Hyperwave Chat', STORE='hyperwave-chat';
+/* ---------- defaults ---------- */
+const D={
+  twRoute:'direct', twChannel:'',
+  kkRoute:'off', kkChannel:'', kkRoom:'', kkKey:'32cbd69e4b950bf97679', kkCluster:'us2',
+  ytRoute:'off', ttRoute:'off', ttPort:21213,
+  sbHost:'127.0.0.1', sbPort:8080, sbPass:'',
+  res:'1920x1080', canvasW:1920, canvasH:1080, boxX:1.5, boxY:33, boxW:26, boxH:64, autoScale:true, anchorMargin:24,
+  exitAnim:'fade', exitMs:450, rainArea:'box',
+  mode:'stack', flowSecs:12, flowVar:20, flowMax:20,
+  rainBg:false, rainColor:'#00FF66', rainAlpha:0.3, rainSpeed:1,
+  stv:true, bttv:true, ffz:true, emAll:true, emoteScale:1.6, bigEmote:true, emoji:'native',
+  dir:'bottom', align:'left', layout:'inline', maxMsgs:25, life:0, maxW:100, gap:6, anim:'slide', animMs:400,
+  nameFont:'Chakra Petch', msgFont:'Inter', customFont:'', fs:20, nameScale:100, nameW:'700', msgW:'500',
+  lh:1.35, ls:0, upper:false, textColor:'#ECE6DA',
+  nameMode:'user', nameCustom:'#F2A33A', brighten:true, nameStyle:'text',
+  shadow:4, shadowColor:'#000000', outline:0, outlineColor:'#000000',
+  shape:'box', boxMode:'single', palette:'#FF5D8F, #FFB347, #FFE066, #7BE0AD, #5BC0EB, #9B5DE5', paletteBy:'user', autoText:true, shine:false,
+  bgColor:'#140D11', bgAlpha:0.72, blur:0, radius:3, borderSide:'side', borderW:3, accent:true, borderColor:'#C8283C', padX:12, padY:7,
+  avatars:false, avatarPos:'inline', avatarShape:'circle', avatarSize:1.4, avatarFallback:true,
+  plat:'pill', badges:true, time:false, roleHi:true, hiWords:'', hiColor:'#F2A33A',
+  colTw:'#9146FF', colYt:'#FF0033', colKk:'#53FC18', colTt:'#25F4EE',
+  hideBots:true, bots:'nightbot, streamelements, streamlabs, moobot, fossabot, sery_bot, wizebot, botrixoficial, kicbot',
+  hideCmd:false, blockUsers:'', blockWords:'', links:'show', maxLen:0,
+  status:false
+};
+const CONN_KEYS=['twRoute','twChannel','kkRoute','kkChannel','kkRoom','kkKey','kkCluster','ytRoute','ttRoute','ttPort','sbHost','sbPort','sbPass'];
+const FLOW={rain:1,rise:1,ltr:1,rtl:1,scatter:1};
+const BOX_COL={boxX:1.5,boxY:33,boxW:26,boxH:64}, BOX_FULL={boxX:0,boxY:0,boxW:100,boxH:100}, BOX_PORTRAIT={boxX:4,boxY:52,boxW:92,boxH:44};
+const ANIMS={slide:['in-slideL','in-slideR'],up:'in-up',down:'in-down',fade:'in-fade',pop:'in-pop',zoom:'in-zoom',bounce:'in-bounce',
+  elastic:['in-elasticL','in-elasticR'],flip:'in-flip',swing:['in-swingL','in-swingR'],spin:'in-spin',blur:'in-blur',glitch:'in-glitch',
+  type:['in-typeL','in-typeR'],wipe:'in-wipe',warp:['in-warpL','in-warpR'],jelly:'in-jelly',unfold:'in-unfold',flicker:'in-flicker',slam:'in-slam'};
+const ANIM_ORIGIN={flip:'50% 0',swing:['0 50%','100% 50%'],warp:['0 50%','100% 50%']};
+const ANIM_EASE={type:'steps(30,end)',flicker:'linear',glitch:'linear',bounce:'ease-out',jelly:'ease-out',elastic:'ease-out',slam:'ease-out',flip:'ease-out',swing:'ease-out'};
+const EXITS={fade:'out-fade',slide:['out-slideL','out-slideR'],shrink:'out-shrink',drop:'out-drop',up:'out-up',blur:'out-blur',warp:['out-warpL','out-warpR']};
+function sided(map,key){ const v=map[key]; if(!v) return null; return Array.isArray(v)?v[C.align==='right'?1:0]:v; }
+
+const FONTS={
+  'Inter':'400;500;600;700;800','Chakra Petch':'400;500;600;700','Rajdhani':'400;500;600;700',
+  'Orbitron':'400;500;600;700;800','Exo 2':'400;500;600;700;800','Oxanium':'400;500;600;700;800',
+  'Audiowide':'','Russo One':'','Share Tech Mono':'','Roboto':'400;500;700','Poppins':'400;500;600;700;800',
+  'Montserrat':'400;500;600;700;800','Nunito':'400;600;700;800','Lexend':'400;500;600;700',
+  'Space Grotesk':'400;500;600;700','Fredoka':'400;500;600;700','Comfortaa':'400;500;600;700',
+  'Lato':'400;700','Oswald':'400;500;600;700','Bebas Neue':'','Bangers':'','Permanent Marker':'',
+  'Press Start 2P':'','VT323':''
+};
+const EMOJI_FB="'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji'";
+const PLAT={twitch:{k:'colTw',label:'Twitch'},youtube:{k:'colYt',label:'YouTube'},kick:{k:'colKk',label:'Kick'},tiktok:{k:'colTt',label:'TikTok'}};
+const TW_COLORS=['#FF0000','#0000FF','#008000','#B22222','#FF7F50','#9ACD32','#FF4500','#2E8B57','#DAA520','#D2691E','#5F9EA0','#1E90FF','#FF69B4','#8A2BE2','#00FF7F'];
+
+/* looks reset before a preset so presets never inherit odd leftovers */
+const LOOK_RESET={hiColor:'#F2A33A',shadowColor:'#000000',outlineColor:'#000000',bgColor:'#140D11',accent:true,borderColor:'#C8283C',nameMode:'user',brighten:true,radius:3,textColor:'#ECE6DA',flowSecs:12,flowVar:20,flowMax:20,mode:'stack',rainBg:false,shape:'box',boxMode:'single',shine:false,nameStyle:'text',autoText:true,
+  avatars:false,avatarPos:'inline',avatarShape:'circle',avatarSize:1.4,maxW:100,align:'left',dir:'bottom',lh:1.35,ls:0,nameScale:100,upper:false,badges:true,plat:'pill'};
+const PRESETS={
+  taiidan:{label:'Taiidan console',v:{nameFont:'Chakra Petch',msgFont:'Inter',fs:20,nameW:'700',msgW:'500',textColor:'#ECE6DA',bgColor:'#140D11',bgAlpha:.72,blur:0,radius:3,borderSide:'side',borderW:3,accent:true,shadow:4,shadowColor:'#000000',outline:0,layout:'inline',anim:'slide',nameMode:'user',brighten:true,padX:12,padY:7,gap:6,hiColor:'#F2A33A'}},
+  matrix:{label:'Matrix rain',v:{mode:'rain',flowSecs:14,flowVar:30,flowMax:18,rainBg:true,rainColor:'#00FF66',rainAlpha:.3,rainSpeed:1,nameFont:'Share Tech Mono',msgFont:'Share Tech Mono',fs:20,nameW:'400',msgW:'400',textColor:'#C8FFD9',nameMode:'custom',nameCustom:'#00FF66',bgAlpha:0,borderSide:'none',shadow:10,shadowColor:'#00FF66',outline:0,plat:'none',layout:'stacked',maxW:28,badges:false,padX:4,padY:2,hiColor:'#00FF66'}},
+  party:{label:'Party bubbles',v:{shape:'speech',boxMode:'palette',paletteBy:'user',bgAlpha:.95,autoText:true,nameFont:'Fredoka',msgFont:'Nunito',fs:20,nameW:'700',msgW:'600',radius:16,borderSide:'none',shadow:0,outline:0,plat:'dot',layout:'stacked',anim:'pop',avatars:true,avatarPos:'side',avatarShape:'circle',avatarSize:2,padX:14,padY:9,gap:14,blur:0}},
+  rising:{label:'Rising bubbles',v:{mode:'rise',flowSecs:9,flowVar:10,flowMax:16,shape:'pill',boxMode:'user',bgAlpha:.92,autoText:true,nameFont:'Poppins',msgFont:'Poppins',fs:19,nameW:'700',msgW:'500',shadow:0,outline:0,borderSide:'none',plat:'none',layout:'inline',avatars:true,avatarSize:1.4,maxW:70,padX:14,padY:7,blur:0}},
+  ticker:{label:'Scrolling ticker',v:{mode:'rtl',flowSecs:10,flowVar:25,flowMax:25,nameFont:'Inter',msgFont:'Inter',fs:26,nameW:'800',msgW:'700',textColor:'#FFFFFF',bgAlpha:0,borderSide:'none',shadow:4,shadowColor:'#000000',outline:2.5,outlineColor:'#000000',plat:'none',layout:'inline',avatars:true,avatarSize:1.3,nameMode:'user',brighten:true}},
+  tags:{label:'Name tags',v:{nameStyle:'tag',nameFont:'Rajdhani',msgFont:'Inter',fs:20,nameW:'700',msgW:'500',textColor:'#FFFFFF',bgColor:'#0E1016',bgAlpha:.7,radius:8,borderSide:'none',shadow:2,outline:0,layout:'inline',anim:'up',nameMode:'user',brighten:true,plat:'dot',avatars:true,avatarShape:'rounded',padX:10,padY:7,gap:6,blur:6}},
+  clean:{label:'Clean text, no boxes',v:{nameFont:'Inter',msgFont:'Inter',fs:22,nameW:'800',msgW:'600',textColor:'#FFFFFF',bgAlpha:0,blur:0,borderSide:'none',shadow:6,shadowColor:'#000000',outline:2,outlineColor:'#000000',plat:'dot',layout:'inline',anim:'fade',nameMode:'user',brighten:true,padX:2,padY:2,gap:4}},
+  bubble:{label:'White chat bubbles',v:{nameFont:'Fredoka',msgFont:'Nunito',fs:20,nameScale:95,nameW:'600',msgW:'600',textColor:'#1C1B22',bgColor:'#FFFFFF',bgAlpha:.94,blur:0,radius:18,borderSide:'none',shadow:0,outline:0,layout:'stacked',anim:'pop',nameMode:'user',brighten:false,padX:16,padY:10,gap:8}},
+  neon:{label:'Neon grid',v:{nameFont:'Orbitron',msgFont:'Exo 2',fs:19,nameScale:92,nameW:'700',msgW:'500',lh:1.4,ls:.3,textColor:'#F1EEFF',bgColor:'#07030F',bgAlpha:.62,blur:6,radius:6,borderSide:'all',borderW:2,accent:true,shadow:10,shadowColor:'#8B5CF6',outline:0,layout:'inline',anim:'slide',nameMode:'user',brighten:true,upper:true,padX:12,padY:8,gap:8}},
+  arcade:{label:'Arcade pixels',v:{shape:'cut',nameFont:'Press Start 2P',msgFont:'VT323',fs:26,nameScale:62,nameW:'400',msgW:'400',lh:1.2,textColor:'#F5F5F5',bgColor:'#000000',bgAlpha:.85,blur:0,radius:0,borderSide:'all',borderW:3,accent:false,borderColor:'#F5F5F5',shadow:0,outline:0,plat:'dot',layout:'stacked',anim:'none',nameMode:'user',brighten:true,padX:12,padY:8,gap:8}},
+  minimal:{label:'Minimal',v:{nameFont:'Lexend',msgFont:'Lexend',fs:18,nameW:'600',msgW:'400',lh:1.4,textColor:'#FFFFFF',bgAlpha:0,blur:0,borderSide:'none',shadow:3,shadowColor:'#000000',outline:0,plat:'none',layout:'inline',anim:'fade',nameMode:'user',brighten:true,padX:0,padY:1,gap:3,badges:false}}
+};
+
+const Q=new URLSearchParams(location.search);
+const IS_OV=Q.has('overlay'), IS_PV=Q.has('preview');
+let C=Object.assign({},D);
+const $=s=>document.querySelector(s);
+const has=(o,k)=>o&&Object.prototype.hasOwnProperty.call(o,k);
+const get=(o,k)=>has(o,k)?o[k]:null;
+function pick(){ for(const x of arguments) if(x!==undefined&&x!==null&&x!=='') return x; return undefined; }
+function list(s){ return String(s||'').split(/[,\n]/).map(x=>x.trim().toLowerCase()).filter(Boolean); }
+const isFlow=()=>has(FLOW,C.mode);
+
+/* ---------- encode / decode settings in the URL ---------- */
+function encode(o){ return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function decode(h){
+  try{ const s=String(h||'').replace(/^#?cfg=/,''); if(!s) return {};
+    let b=s.replace(/-/g,'+').replace(/_/g,'/'); while(b.length%4) b+='=';
+    return JSON.parse(decodeURIComponent(escape(atob(b))));
+  }catch(e){ return {}; }
+}
+function diff(c){ const o={}; for(const k in D) if(c[k]!==D[k]) o[k]=c[k]; return o; }
+
+/* ---------- fonts & colors ---------- */
+const loadedFonts=new Set();
+function ensureFont(f){
+  if(!has(FONTS,f)||loadedFonts.has(f)) return; loadedFonts.add(f);
+  const l=document.createElement('link'); l.rel='stylesheet';
+  l.href='https://fonts.googleapis.com/css2?family='+f.replace(/ /g,'+')+(FONTS[f]?':wght@'+FONTS[f]:'')+'&display=swap';
+  document.head.appendChild(l);
+}
+function stack(f){
+  if(f==='system') return "'Segoe UI',system-ui,-apple-system,sans-serif,"+EMOJI_FB;
+  if(f==='custom') f=(C.customFont||'').trim()||'Inter';
+  return "'"+String(f).replace(/['"]/g,'')+"','Segoe UI',system-ui,sans-serif,"+EMOJI_FB;
+}
+function hex2rgb(h){ h=String(h||'#000').replace('#',''); if(h.length===3) h=h.split('').map(x=>x+x).join(''); const n=parseInt(h,16)||0; return [n>>16&255,n>>8&255,n&255]; }
+function rgba(h,a){ const c=hex2rgb(h); return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'; }
+function lum(h){ const c=hex2rgb(h).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);}); return .2126*c[0]+.7152*c[1]+.0722*c[2]; }
+function contrast(a,b){ const x=lum(a), y=lum(b); return (Math.max(x,y)+.05)/(Math.min(x,y)+.05); }
+const inkOn=bg=>lum(bg)>.36?'#15151A':'#FFFFFF';
+function brighten(h){
+  const c=hex2rgb(h).map(v=>v/255), r=c[0],g=c[1],b=c[2];
+  const mx=Math.max(r,g,b), mn=Math.min(r,g,b); let H=0,S=0,L=(mx+mn)/2;
+  if(L>=.6) return h;
+  if(mx!==mn){ const d=mx-mn; S=L>.5?d/(2-mx-mn):d/(mx+mn); H=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4; H/=6; }
+  L=.64; const q=L<.5?L*(1+S):L+S-L*S, p=2*L-q;
+  const f=t=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6) return p+(q-p)*6*t; if(t<1/2) return q; if(t<2/3) return p+(q-p)*(2/3-t)*6; return p; };
+  const to=v=>Math.round(v*255).toString(16).padStart(2,'0');
+  return '#'+to(f(H+1/3))+to(f(H))+to(f(H-1/3));
+}
+function hashNum(s){ let h=0; for(const ch of String(s)) h=(h*31+ch.charCodeAt(0))|0; return Math.abs(h); }
+function userColor(m){ let c=m.color; if(!/^#[0-9a-f]{6}$/i.test(c||'')) c=TW_COLORS[hashNum(m.login||m.user)%TW_COLORS.length]; return C.brighten?brighten(c):c; }
+function nameColor(m){
+  if(C.nameMode==='platform') return C[PLAT[m.platform].k];
+  if(C.nameMode==='custom') return C.nameCustom;
+  return userColor(m);
+}
+function paletteList(){ return (String(C.palette||'').match(/#[0-9a-f]{6}\b|#[0-9a-f]{3}\b/gi)||[]); }
+let palCounter=0;
+function boxColor(m){
+  if(C.boxMode==='platform') return C[PLAT[m.platform].k];
+  if(C.boxMode==='user') return userColor(m);
+  if(C.boxMode==='palette'){ const pal=paletteList(); if(!pal.length) return null;
+    if(C.paletteBy==='message'){ if(m._pi==null) m._pi=palCounter++; return pal[m._pi%pal.length]; }
+    return pal[hashNum(m.login)%pal.length]; }
+  return null;
+}
+let twemojiLoading=false;
+function loadTwemoji(){
+  if(window.twemoji||twemojiLoading) return; twemojiLoading=true;
+  const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js';
+  s.onload=()=>rerenderAll(); document.head.appendChild(s);
+}
+
+/* ---------- apply look ---------- */
+function applyStyle(){
+  const st=document.documentElement.style, s=(k,v)=>st.setProperty(k,v);
+  ensureFont(C.msgFont); ensureFont(C.nameFont);
+  s('--font-msg',stack(C.msgFont)); s('--font-name',stack(C.nameFont));
+  // sizes are designed at 1080p and scale with the real output size
+  const S=C.autoScale?Math.max(.3,Math.min(innerWidth||1920,innerHeight||1080)/1080):1, px=v=>(+v*S).toFixed(2)+'px';
+  s('--box-x',C.boxX+'%'); s('--box-y',C.boxY+'%'); s('--box-w',C.boxW+'%'); s('--box-h',C.boxH+'%'); s('--cpad',px(8));
+  s('--fs',px(C.fs)); s('--ns',C.nameScale/100); s('--fw-name',C.nameW); s('--fw-msg',C.msgW);
+  s('--lh',C.lh); s('--ls',px(C.ls)); s('--text',C.textColor);
+  s('--bg',rgba(C.bgColor,C.bgAlpha)); s('--blur',px(C.blur)); s('--radius',px(C.radius));
+  s('--bw',px(C.borderW)); s('--bc',C.borderColor); s('--px',px(C.padX)); s('--py',px(C.padY));
+  s('--gap',px(C.gap)); s('--maxw',C.maxW+'%'); s('--es',C.emoteScale); s('--anim-ms',C.animMs+'ms');
+  s('--hi',rgba(C.hiColor,.22)); s('--hi-edge',C.hiColor);
+  s('--as',C.avatarSize); s('--ar',C.avatarShape==='circle'?'50%':C.avatarShape==='rounded'?'24%':'0');
+  for(const p in PLAT){ const c=C[PLAT[p].k]; s('--col-'+p,c); s('--ink-'+p,inkOn(c)); }
+  const sh=[], o=+C.outline*S, shb=+C.shadow*S;
+  if(o>0) for(let a=0;a<16;a++){ const t=a/16*Math.PI*2; sh.push((Math.cos(t)*o).toFixed(2)+'px '+(Math.sin(t)*o).toFixed(2)+'px 0 '+C.outlineColor); }
+  if(shb>0) sh.push('0 '+Math.max(1,Math.round(shb/5))+'px '+shb.toFixed(1)+'px '+C.shadowColor);
+  s('--tsh',sh.length?sh.join(','):'none');
+  $('#chat').className=['mode-'+(isFlow()?'flow':'stack'),(C.mode==='ltr'||C.mode==='rtl')?'nowrap':'',
+    'dir-'+C.dir,'al-'+C.align,'b-'+C.borderSide,'lay-'+C.layout,'shape-'+C.shape,
+    C.accent?'accent':'',C.upper?'upper':'',C.shine?'shine':''].join(' ');
+  if(C.emoji==='twemoji') loadTwemoji();
+  $('#ovStatus').hidden=!(IS_OV&&C.status);
+  setupRain();
+}
+
+/* ---------- digital rain background ---------- */
+let rainRAF=null, rainCols=[], rainResizeBound=false;
+const GLYPHS='アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン0123456789';
+function setupRain(){
+  const cv=$('#rainCanvas'), on=IS_OV&&C.rainBg;
+  cv.hidden=!on; cv.style.opacity=C.rainAlpha; cv.classList.toggle('in-box',C.rainArea==='box');
+  if(!on){ if(rainRAF) cancelAnimationFrame(rainRAF); rainRAF=null; return; }
+  const size=16;
+  const w=Math.round(cv.clientWidth||innerWidth), h=Math.round(cv.clientHeight||innerHeight);
+  if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; const n=Math.ceil(w/size);
+    rainCols=Array.from({length:n},(_,i)=>rainCols[i]!=null?rainCols[i]:-Math.random()*h/size); }
+  if(rainRAF) return;
+  const ctx=cv.getContext('2d'); let last=0;
+  const step=t=>{
+    rainRAF=requestAnimationFrame(step);
+    if(t-last<55/Math.max(.2,C.rainSpeed)) return; last=t;
+    ctx.globalCompositeOperation='destination-out'; ctx.fillStyle='rgba(0,0,0,0.09)'; ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.globalCompositeOperation='source-over'; ctx.font=size+'px monospace';
+    for(let i=0;i<rainCols.length;i++){
+      const y=rainCols[i]*size;
+      if(y>0){ ctx.fillStyle=Math.random()>.94?'#FFFFFF':C.rainColor; ctx.fillText(GLYPHS[(Math.random()*GLYPHS.length)|0],i*size,y); }
+      if(y>cv.height&&Math.random()>.975) rainCols[i]=0;
+      rainCols[i]+=1;
+    }
+  };
+  rainRAF=requestAnimationFrame(step);
+}
+
+/* ---------- third-party emotes, badges, profile pictures ---------- */
+const EM={stvCh:Object.create(null),bttvCh:Object.create(null),ffzCh:Object.create(null),stvGl:Object.create(null),bttvGl:Object.create(null),ffzGl:Object.create(null)};
+const EMO_ORDER=[['stvCh','stv'],['bttvCh','bttv'],['ffzCh','ffz'],['stvGl','stv'],['bttvGl','bttv'],['ffzGl','ffz']];
+const BADGE={gl:Object.create(null),ch:Object.create(null)};
+let globalsLoaded=false, chanLoaded=null, chanLogin=null;
+const getJSON=u=>fetch(u).then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); });
+function stvAdd(map,e){
+  const h=e&&e.data&&e.data.host; if(!h||!h.url) return;
+  const files=(h.files||[]).map(f=>f.name);
+  const file=files.includes('2x.webp')?'2x.webp':(files.find(n=>/^2x/.test(n))||files[0]||'2x.webp');
+  map[e.name]=(h.url.startsWith('//')?'https:':'')+h.url+'/'+file;
+}
+function ffzSet(map,set){ if(!set) return; (set.emoticons||[]).forEach(e=>{ const u=e.urls&&(e.urls['2']||e.urls['1']); if(u) map[e.name]=u.startsWith('//')?'https:'+u:u; }); }
+function bttvAdd(map,arr){ (arr||[]).forEach(e=>{ if(e&&e.code) map[e.code]='https://cdn.betterttv.net/emote/'+e.id+'/2x'; }); }
+function badgeAdd(map,arr){ (Array.isArray(arr)?arr:[]).forEach(s=>(s.versions||[]).forEach(v=>{ map[s.set_id+'/'+v.id]=v.image_url_2x||v.image_url_1x; })); }
+function loadGlobals(){
+  if(globalsLoaded) return; globalsLoaded=true;
+  getJSON('https://7tv.io/v3/emote-sets/global').then(d=>(d.emotes||[]).forEach(e=>stvAdd(EM.stvGl,e))).catch(()=>{});
+  getJSON('https://api.betterttv.net/3/cached/emotes/global').then(d=>bttvAdd(EM.bttvGl,d)).catch(()=>{});
+  getJSON('https://api.frankerfacez.com/v1/set/global').then(d=>(d.default_sets||[]).forEach(id=>ffzSet(EM.ffzGl,d.sets&&d.sets[id]))).catch(()=>{});
+  getJSON('https://api.ivr.fi/v2/twitch/badges/global').then(d=>badgeAdd(BADGE.gl,d)).catch(()=>{});
+}
+function loadChannel(id){
+  id=String(id||''); if(!id||chanLoaded===id) return; chanLoaded=id;
+  EM.stvCh=Object.create(null); EM.bttvCh=Object.create(null); EM.ffzCh=Object.create(null);
+  getJSON('https://7tv.io/v3/users/twitch/'+id).then(d=>((d.emote_set&&d.emote_set.emotes)||[]).forEach(e=>stvAdd(EM.stvCh,e))).catch(()=>{});
+  getJSON('https://api.betterttv.net/3/cached/users/twitch/'+id).then(d=>{ bttvAdd(EM.bttvCh,d.channelEmotes); bttvAdd(EM.bttvCh,d.sharedEmotes); }).catch(()=>{});
+  getJSON('https://api.frankerfacez.com/v1/room/id/'+id).then(d=>Object.values(d.sets||{}).forEach(s=>ffzSet(EM.ffzCh,s))).catch(()=>{});
+}
+function loadEmotes(){
+  loadGlobals();
+  const ch=list(C.twChannel)[0]; if(!ch||ch===chanLogin) return; chanLogin=ch;
+  BADGE.ch=Object.create(null);
+  getJSON('https://api.ivr.fi/v2/twitch/user?login='+encodeURIComponent(ch)).then(d=>{ const u=Array.isArray(d)?d[0]:d; if(u&&u.id) loadChannel(u.id); }).catch(()=>{});
+  getJSON('https://api.ivr.fi/v2/twitch/badges/channel?login='+encodeURIComponent(ch)).then(d=>badgeAdd(BADGE.ch,d)).catch(()=>{});
+}
+function lookup3(tok,m){
+  if(!C.emAll&&m.platform!=='twitch') return null;
+  for(const pair of EMO_ORDER){ if(!C[pair[1]]) continue; const u=get(EM[pair[0]],tok); if(u) return u; }
+  return null;
+}
+/* Twitch profile pictures: looked up once per chatter, then cached */
+const AV=Object.create(null), AVP=Object.create(null);
+function avatarUrl(m){
+  if(m.avatar) return m.avatar;
+  if(m.platform!=='twitch'||!m.login||/\s/.test(m.login)) return '';
+  const k=m.login; if(has(AV,k)) return AV[k];
+  if(!AVP[k]){ AVP[k]=1;
+    getJSON('https://api.ivr.fi/v2/twitch/user?login='+encodeURIComponent(k)).then(d=>{
+      const u=Array.isArray(d)?d[0]:d; AV[k]=(u&&u.logo)||'';
+      if(AV[k]) document.querySelectorAll('#chat [data-login="twitch:'+CSS.escape(k)+'"]').forEach(refresh);
+    }).catch(()=>{ AV[k]=''; }); }
+  return '';
+}
+
+/* ---------- message rendering ---------- */
+const KICK_RE=/\[emote:(\d+):([^\]]*)\]/g;
+const URL_TEST=/(?:https?:\/\/|www\.)\S+/i, URL_ALL=/(?:https?:\/\/|www\.)\S+/gi;
+function span(cls,txt){ const e=document.createElement('span'); e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+function img(cls,src,alt){ const i=document.createElement('img'); i.className=cls; i.src=src; i.alt=alt||''; i.decoding='async'; return i; }
+function fillBody(body,m){
+  let emo=0, txt=0;
+  const addImg=(u,alt)=>{ const i=img('em',u,alt); i.onerror=()=>i.replaceWith(document.createTextNode(alt)); body.append(i); emo++; };
+  const addText=t=>{ String(t||'').split(/(\s+)/).forEach(tok=>{
+      if(!tok) return;
+      if(!/\s/.test(tok)){ const u=get(m.emotes,tok)||lookup3(tok,m); if(u){ addImg(u,tok); return; } txt++; }
+      body.append(document.createTextNode(tok));
+  }); };
+  if(Array.isArray(m.parts)&&m.parts.length){ m.parts.forEach(p=>{ if(p.img) addImg(p.img,p.alt||''); else addText(p.text); }); }
+  else { const s=m.text||''; let last=0; s.replace(KICK_RE,(all,id,nm,idx)=>{ addText(s.slice(last,idx)); addImg('https://files.kick.com/emotes/'+id+'/fullsize',nm); last=idx+all.length; return all; }); addText(s.slice(last)); }
+  return emo>0&&txt===0;
+}
+function avatarEl(m){
+  const col=userColor(m);
+  const initials=()=>{ const a=span('avi'); a.style.background=col; a.style.color=inkOn(col);
+    const b=document.createElement('b'); b.textContent=(Array.from(String(m.user).trim())[0]||'?').toUpperCase(); a.append(b); return a; };
+  const u=avatarUrl(m);
+  if(u){ const i=img('av',u,''); i.onerror=()=>{ if(C.avatarFallback) i.replaceWith(initials()); else i.remove(); }; return i; }
+  return C.avatarFallback?initials():null;
+}
+function render(m,animate){
+  const el=document.createElement('div'); el.className='m p-'+m.platform; el._m=m;
+  if(m.msgId) el.dataset.mid=m.platform+':'+m.msgId;
+  if(m.userId) el.dataset.uid=m.platform+':'+m.userId;
+  el.dataset.login=m.platform+':'+m.login;
+  if((C.roleHi&&(m.bc||m.mod))||m.hl) el.classList.add('hi');
+
+  // bubble color and readable text
+  const bc=boxColor(m); let ink=null;
+  if(bc){ el.style.setProperty('--bg',rgba(bc,C.bgAlpha));
+    if(C.autoText&&C.bgAlpha>=.45){ ink=inkOn(bc); el.style.color=ink; el.style.textShadow='none'; } }
+  let col=nameColor(m);
+  if(bc&&ink&&contrast(col,bc)<3) col=ink;
+
+  const meta=span('meta');
+  if(C.time) meta.append(span('ts',new Date(m.t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})));
+  if(C.plat==='pill') meta.append(span('pl',PLAT[m.platform].label));
+  else if(C.plat==='dot') meta.append(span('pd'));
+  const av=C.avatars?avatarEl(m):null;
+  if(av&&C.avatarPos!=='side') meta.append(av);
+  if(C.badges&&m.badges&&m.badges.length) m.badges.forEach(u=>{ const b=img('bd',u,''); b.onerror=()=>b.remove(); meta.append(b); });
+  const nm=span('name',m.user);
+  if(C.nameStyle==='tag'){ const tc=nameColor(m); nm.classList.add('tag'); nm.style.background=tc; nm.style.color=inkOn(tc); }
+  else nm.style.color=col;
+  meta.append(nm);
+  if(!m.action&&C.nameStyle!=='tag'){ const sp=span('sep',':'); sp.style.color=col; meta.append(sp); }
+  const body=span('body'); if(m.action){ body.style.fontStyle='italic'; body.style.color=col; }
+  if(fillBody(body,m)&&C.bigEmote) el.classList.add('big');
+
+  if(av&&C.avatarPos==='side'){ el.classList.add('side'); const content=document.createElement('div'); content.className='content'; content.append(meta,body); el.append(av,content); }
+  else el.append(meta,body);
+
+  if(C.emoji==='twemoji'&&window.twemoji) try{ window.twemoji.parse(body,{folder:'svg',ext:'.svg',className:'emoji'}); }catch(e){}
+  if(animate&&!isFlow()&&C.anim!=='none'&&+C.animMs>0){
+    const a=sided(ANIMS,C.anim);
+    if(a){ el.style.animation=a+' var(--anim-ms) '+(ANIM_EASE[C.anim]||'cubic-bezier(.2,.8,.2,1)')+' backwards';
+      const o=C.anim==='unfold'?(C.dir==='top'?'50% 0':'50% 100%'):sided(ANIM_ORIGIN,C.anim); if(o) el.style.transformOrigin=o; }
+  }
+  return el;
+}
+/* re-draw a message in place, keeping any motion it already has */
+function refresh(el){
+  if(!el._m||el._leaving) return;
+  const n=render(el._m,false);
+  el.className=n.className; el.style.cssText=n.style.cssText;
+  el.replaceChildren(...n.childNodes);
+}
+function rerenderAll(){ [...$('#chat').children].forEach(refresh); }
+
+const seen=new Map();
+function ingest(m){
+  m.t=m.t||Date.now(); m.user=String(m.user||'someone'); m.login=String(m.login||m.user).toLowerCase();
+  let text=String(m.text==null?'':m.text); const low=text.toLowerCase();
+  if(C.hideBots&&list(C.bots).includes(m.login)) return;
+  if(list(C.blockUsers).includes(m.login)) return;
+  if(C.hideCmd&&text.trim().startsWith('!')) return;
+  if(list(C.blockWords).some(w=>low.includes(w))) return;
+  if(C.links!=='show'&&URL_TEST.test(text)){ if(C.links==='hide') return; text=text.replace(URL_ALL,'[link]'); }
+  if(+C.maxLen>0){ const cp=Array.from(text); if(cp.length>C.maxLen) text=cp.slice(0,C.maxLen).join('')+'…'; }
+  m.text=text;
+  const hw=list(C.hiWords); if(hw.length&&hw.some(w=>low.includes(w))) m.hl=true;
+  if(m.msgId){ const key=m.platform+':'+m.msgId; if(seen.has(key)) return; seen.set(key,1); if(seen.size>600) seen.delete(seen.keys().next().value); }
+  const el=render(m,true);
+  if(isFlow()) addFlow(el); else addStack(el);
+}
+function addStack(el){
+  const ch=$('#chat');
+  if(C.dir==='top') ch.prepend(el); else ch.append(el);
+  const live=[...ch.children].filter(x=>!x._leaving);
+  const extra=live.length-C.maxMsgs;
+  for(let i=0;i<extra;i++){ const old=C.dir==='top'?live[live.length-1-i]:live[i]; old.remove(); }
+  if(+C.life>0) setTimeout(()=>leave(el),C.life*1000);
+}
+/* free-moving modes: rain, rise, scroll left/right, scatter */
+/* pick a spot that overlaps the most recent messages the least */
+let recentSpots=[];
+function farSpot(range,size){
+  let best=Math.random()*range, score=-Infinity;
+  for(let i=0;i<14;i++){ const a=Math.random()*range, b=a+size;
+    const s=recentSpots.length?Math.min(...recentSpots.map(r=>Math.max(r[0]-b,a-r[1]))):range;
+    if(s>score){ score=s; best=a; } }
+  recentSpots.push([best,best+size]); if(recentSpots.length>Math.max(3,Math.round(C.flowMax/3))) recentSpots.shift();
+  return Math.round(best);
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function addFlow(el){
+  const ch=$('#chat');
+  el.style.visibility='hidden'; ch.append(el);
+  // wait for emotes and pictures so the size is right before it starts moving
+  const pending=[...el.querySelectorAll('img')].filter(i=>!i.complete);
+  if(pending.length) await Promise.race([Promise.all(pending.map(i=>new Promise(r=>{ i.addEventListener('load',r,{once:true}); i.addEventListener('error',r,{once:true}); }))),sleep(800)]);
+  if(!el.isConnected) return;
+  const W=ch.clientWidth, H=ch.clientHeight, w=el.offsetWidth, h=el.offsetHeight;
+  const live=[...ch.children].filter(x=>!x._leaving);
+  for(let i=0;i<live.length-C.flowMax;i++) leave(live[i]);
+  const spread=1+((Math.random()*2-1)*C.flowVar/100);
+  const dur=Math.max(1.5,C.flowSecs*spread)*1000;
+  const T=(x,y,sc)=>'translate('+x+'px,'+y+'px)'+(sc?' scale('+sc+')':'');
+  let frames;
+  if(C.mode==='rain'||C.mode==='rise'){
+    const x=farSpot(Math.max(0,W-w),w), from=C.mode==='rain'?-h:H, to=C.mode==='rain'?H:-h;
+    frames=[{transform:T(x,from),opacity:0},{opacity:1,offset:.12},{opacity:1,offset:.8},{transform:T(x,to),opacity:0}];
+  }else if(C.mode==='ltr'||C.mode==='rtl'){
+    const y=farSpot(Math.max(0,H-h),h), from=C.mode==='ltr'?-w:W, to=C.mode==='ltr'?W:-w;
+    frames=[{transform:T(from,y),opacity:0},{opacity:1,offset:.04},{opacity:1,offset:.96},{transform:T(to,y),opacity:0}];
+  }else{
+    const x=Math.round(Math.random()*Math.max(0,W-w)), y=farSpot(Math.max(0,H-h),h);
+    frames=[{transform:T(x,y,.85),opacity:0},{transform:T(x,y,1),opacity:1,offset:.07},{transform:T(x,y,1),opacity:1,offset:.85},{transform:T(x,y,1),opacity:0}];
+  }
+  el.style.visibility='';
+  el._anim=el.animate(frames,{duration:dur,easing:'linear',fill:'both'});
+  el._anim.onfinish=()=>el.remove();
+}
+function leave(el){
+  if(!el||!el.isConnected||el._leaving) return; el._leaving=true;
+  if(el._anim){ const op=getComputedStyle(el).opacity; el.animate([{opacity:op},{opacity:0}],{duration:400,fill:'forwards'}).onfinish=()=>el.remove(); }
+  else {
+    if(C.exitAnim==='none'||!(+C.exitMs>0)){ el.remove(); return; }
+    const a=sided(EXITS,C.exitAnim)||'out-fade';
+    if(C.exitAnim==='warp') el.style.transformOrigin=C.align==='right'?'100% 50%':'0 50%';
+    el.style.animation=a+' '+C.exitMs+'ms ease-in forwards'; setTimeout(()=>el.remove(),+C.exitMs+40);
+  }
+}
+function removeWhere(attr,val){ if(!val||/:undefined$/.test(val)) return; document.querySelectorAll('#chat [data-'+attr+'="'+CSS.escape(val)+'"]').forEach(leave); }
+function clearPlatform(p){ document.querySelectorAll('#chat .p-'+p).forEach(leave); }
+
+/* ---------- connections ---------- */
+const STATUS={}, conns={};
+function status(k,v){
+  if(v==null) delete STATUS[k]; else STATUS[k]=v;
+  const box=$('#ovStatus'); if(box) box.textContent=Object.keys(STATUS).map(a=>a+': '+STATUS[a]).join('   ');
+  if(IS_PV&&window.parent!==window) window.parent.postMessage({type:'mc-status',status:Object.assign({},STATUS)},'*');
+}
+function closeWS(key){ const ws=conns[key]; conns[key]=null; if(ws){ try{ ws.close(); }catch(e){} } }
+function openWS(key,url,h){
+  closeWS(key); let ws;
+  try{ ws=new WebSocket(url); }catch(e){ status(h.label,'bad address'); return null; }
+  conns[key]=ws;
+  ws.onopen=()=>{ if(h.open) h.open(ws); };
+  ws.onmessage=e=>h.msg(ws,e.data);
+  ws.onerror=()=>{};
+  ws.onclose=()=>{ if(conns[key]!==ws) return; status(h.label,'reconnecting…'); setTimeout(()=>{ if(conns[key]===ws) h.retry(); },h.delay||4000); };
+  return ws;
+}
+/* Streamer.bot WebSocket Server */
+async function sha256b64(s){ const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)); return btoa(String.fromCharCode.apply(null,new Uint8Array(h))); }
+async function sbAuth(pw,a){ const secret=await sha256b64(pw+a.salt); return sha256b64(secret+a.challenge); }
+function connectSB(){
+  if(!(C.twRoute==='sb'||C.kkRoute==='sb'||C.ytRoute==='sb')) return;
+  status('Streamer.bot','connecting…');
+  let hello=false, subbed=false;
+  const subscribe=ws=>{
+    if(subbed) return; subbed=true;
+    const ev={};
+    if(C.twRoute==='sb') ev.Twitch=['ChatMessage','ChatMessageDeleted','UserTimedOut','UserBanned','ChatCleared'];
+    if(C.ytRoute==='sb') ev.YouTube=['Message','MessageDeleted','UserBanned'];
+    if(C.kkRoute==='sb') ev.Kick=['ChatMessage','ChatMessageDeleted','UserBanned','UserTimedOut'];
+    Object.keys(ev).forEach(src=>ev[src].forEach(e=>ws.send(JSON.stringify({request:'Subscribe',id:'mc-'+src+'-'+e,events:{[src]:[e]}}))));
+    status('Streamer.bot','connected');
+  };
+  openWS('sb','ws://'+C.sbHost+':'+C.sbPort+'/',{label:'Streamer.bot',retry:connectSB,
+    open(ws){ setTimeout(()=>{ if(!hello&&conns.sb===ws&&ws.readyState===1) subscribe(ws); },1500); },
+    async msg(ws,raw){
+      let d; try{ d=JSON.parse(raw); }catch(e){ return; }
+      if(d.request==='Hello'){
+        hello=true;
+        if(d.authentication){
+          if(!C.sbPass){ status('Streamer.bot','needs the WebSocket password'); return; }
+          const a=await sbAuth(C.sbPass,d.authentication);
+          ws.send(JSON.stringify({request:'Authenticate',id:'mc-auth',authentication:a}));
+        }
+        subscribe(ws); return;
+      }
+      if(d.id==='mc-auth'&&d.status&&d.status!=='ok') status('Streamer.bot','password rejected');
+      if(d.event&&d.data) handleSB(d.event.source,d.event.type,d.data);
+    }});
+}
+function emoteMap(arr){
+  const m=Object.create(null);
+  (Array.isArray(arr)?arr:[]).forEach(x=>{
+    if(!x) return;
+    const n=pick(x.name,x.Name,x.code), id=pick(x.id,x.Id);
+    const u=pick(x.imageUrl,x.ImageUrl,x.url,(id&&/^(\d+|emotesv2_\w+)$/.test(String(id)))?'https://static-cdn.jtvnw.net/emoticons/v2/'+id+'/default/dark/2.0':undefined);
+    if(n&&u) m[n]=u;
+  });
+  return m;
+}
+function sbParts(parts){
+  if(!Array.isArray(parts)||!parts.length) return null;
+  const out=parts.map(p=>{ if(!p) return null; const u=pick(p.imageUrl,p.url,p.image&&p.image.url); if(u) return {img:u,alt:pick(p.text,p.name,p.alt,'')}; return {text:pick(p.text,'')}; }).filter(Boolean);
+  return out.length?out:null;
+}
+function handleSB(src,type,d){
+  if(src==='Twitch'&&C.twRoute==='sb'){
+    if(type==='ChatMessage'){
+      const m=(d.message&&typeof d.message==='object')?d.message:d, u=d.user||{}, role=+pick(m.role,u.role,0);
+      ingest({platform:'twitch',user:pick(m.displayName,u.name,m.username,u.login),login:pick(m.username,u.login,m.displayName,u.name),
+        color:pick(m.color,u.color),text:pick(m.message,m.text,d.text,''),emotes:emoteMap(pick(m.emotes,d.emotes)),
+        badges:(pick(m.badges,u.badges)||[]).map(b=>b&&pick(b.imageUrl,b.image_url,b.url)).filter(Boolean),
+        avatar:pick(u.profileImageUrl,u.profile_image_url,m.profileImageUrl),
+        action:!!m.isMe,msgId:pick(m.msgId,d.messageId,m.id),userId:pick(m.userId,u.id),bc:role===4,mod:role>=3});
+    }else if(type==='ChatMessageDeleted'){ removeWhere('mid','twitch:'+pick(d.messageId,d.targetMessageId,d.msgId,d.message&&d.message.msgId)); }
+    else if(type==='UserBanned'||type==='UserTimedOut'){
+      const u=d.user||{}, id=pick(d.user_id,d.userId,d.target_user_id,u.id), lg=pick(d.user_login,d.userLogin,d.user_name,u.login);
+      if(id) removeWhere('uid','twitch:'+id); if(lg) removeWhere('login','twitch:'+String(lg).toLowerCase());
+    }else if(type==='ChatCleared') clearPlatform('twitch');
+  }
+  else if(src==='YouTube'&&C.ytRoute==='sb'){
+    if(type==='Message'){
+      const u=d.user||{};
+      ingest({platform:'youtube',user:pick(u.name,u.displayName,d.userName),login:pick(u.name,d.userName),
+        text:pick(typeof d.message==='string'?d.message:undefined,d.text,''),parts:sbParts(d.parts),
+        avatar:pick(u.profileImageUrl,u.avatar),msgId:pick(d.eventId,d.messageId,d.id),userId:pick(u.id,u.channelId),
+        bc:!!u.isOwner,mod:!!u.isModerator});
+    }else if(type==='MessageDeleted'){ removeWhere('mid','youtube:'+pick(d.targetMessageId,d.messageId,d.eventId,d.id)); }
+    else if(type==='UserBanned'){ const u=d.user||d.bannedUser||{}; removeWhere('uid','youtube:'+pick(u.id,u.channelId,d.userId)); }
+  }
+  else if(src==='Kick'&&C.kkRoute==='sb'){
+    if(type==='ChatMessage'){
+      const u=d.user||d.sender||{}, msgObj=(d.message&&typeof d.message==='object')?d.message:null;
+      ingest({platform:'kick',user:pick(u.name,u.displayName,u.login,u.username,d.userName),login:pick(u.login,u.username,u.slug,u.name),
+        color:pick(u.color,u.identity&&u.identity.color),
+        text:pick(typeof d.text==='string'?d.text:undefined,typeof d.message==='string'?d.message:undefined,msgObj&&msgObj.text,msgObj&&msgObj.content,d.content,''),
+        emotes:emoteMap(d.emotes),avatar:pick(u.profilePicture,u.profileImageUrl,u.profile_pic,u.avatar),
+        msgId:pick(d.messageId,d.id,msgObj&&msgObj.id),userId:u.id,
+        mod:!!(u.isModerator||+u.role>=3),bc:!!(u.isBroadcaster||+u.role===4)});
+    }else if(type==='ChatMessageDeleted'){ removeWhere('mid','kick:'+pick(d.messageId,d.id,d.message&&d.message.id)); }
+    else if(type==='UserBanned'||type==='UserTimedOut'){ const u=d.user||{}; removeWhere('uid','kick:'+pick(u.id,d.userId)); }
+  }
+}
+/* Twitch direct (anonymous, read-only) */
+function parseIRC(line){
+  const tags={}; let prefix='';
+  if(line[0]==='@'){ const sp=line.indexOf(' ');
+    line.slice(1,sp).split(';').forEach(t=>{ const e=t.indexOf('='); tags[t.slice(0,e)]=t.slice(e+1).replace(/\\s/g,' ').replace(/\\:/g,';').replace(/\\\\/g,'\\'); });
+    line=line.slice(sp+1); }
+  if(line[0]===':'){ const sp=line.indexOf(' '); prefix=line.slice(1,sp); line=line.slice(sp+1); }
+  let trailing=null; const ti=line.indexOf(' :'); if(ti>=0){ trailing=line.slice(ti+2); line=line.slice(0,ti); }
+  const parts=line.split(' ');
+  return {tags,prefix,cmd:parts[0],params:parts.slice(1),trailing};
+}
+function connectTwitch(){
+  if(C.twRoute!=='direct') return;
+  const chans=list(C.twChannel).map(c=>c.replace(/^#/,''));
+  if(!chans.length){ status('Twitch','add a channel name'); return; }
+  status('Twitch','connecting…');
+  openWS('tw','wss://irc-ws.chat.twitch.tv:443',{label:'Twitch',retry:connectTwitch,
+    open(ws){ ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands'); ws.send('PASS SCHMOOPIIE');
+      ws.send('NICK justinfan'+(10000+Math.floor(Math.random()*80000))); chans.forEach(c=>ws.send('JOIN #'+c)); status('Twitch','connected'); },
+    msg(ws,data){ String(data).split('\r\n').forEach(line=>{ if(!line) return; if(line.startsWith('PING')){ ws.send('PONG :tmi.twitch.tv'); return; } twIRC(parseIRC(line),ws); }); }
+  });
+}
+function twIRC(p,ws){
+  const t=p.tags, login=(p.prefix||'').split('!')[0];
+  if(p.cmd==='PRIVMSG'){
+    let text=p.trailing||'', action=false;
+    const am=text.match(/^\u0001ACTION (.*)\u0001$/); if(am){ text=am[1]; action=true; }
+    const emotes=Object.create(null);
+    if(t.emotes){ const cps=Array.from(text);
+      t.emotes.split('/').forEach(g=>{ const i=g.indexOf(':'); if(i<0) return; const id=g.slice(0,i), r=g.slice(i+1).split(',')[0].split('-').map(Number);
+        const name=cps.slice(r[0],r[1]+1).join(''); if(name) emotes[name]='https://static-cdn.jtvnw.net/emoticons/v2/'+id+'/default/dark/2.0'; }); }
+    const bl=(t.badges||'').split(',').filter(Boolean);
+    ingest({platform:'twitch',user:t['display-name']||login,login,color:t.color,text,emotes,action,
+      badges:bl.map(b=>get(BADGE.ch,b)||get(BADGE.gl,b)).filter(Boolean),msgId:t.id,userId:t['user-id'],
+      bc:bl.some(b=>b.startsWith('broadcaster/')),mod:bl.some(b=>b.startsWith('moderator/'))});
+  }
+  else if(p.cmd==='CLEARMSG') removeWhere('mid','twitch:'+t['target-msg-id']);
+  else if(p.cmd==='CLEARCHAT'){ if(t['target-user-id']) removeWhere('uid','twitch:'+t['target-user-id']); else clearPlatform('twitch'); }
+  else if(p.cmd==='ROOMSTATE'&&t['room-id']) loadChannel(t['room-id']);
+  else if(p.cmd==='RECONNECT') ws.close();
+}
+/* Kick direct (public chat socket) */
+const kickRooms={};
+async function connectKick(){
+  if(C.kkRoute!=='direct') return;
+  const slug=String(C.kkChannel||'').trim().toLowerCase();
+  let room=String(C.kkRoom||'').trim()||kickRooms[slug];
+  if(!room&&slug){ status('Kick','looking up chatroom…');
+    try{ const d=await getJSON('https://kick.com/api/v2/channels/'+encodeURIComponent(slug)); room=d&&d.chatroom&&d.chatroom.id; if(room) kickRooms[slug]=room; }catch(e){} }
+  if(!room){ status('Kick','enter the chatroom ID in Chat sources'); return; }
+  status('Kick','connecting…');
+  openWS('kk','wss://ws-'+C.kkCluster+'.pusher.com/app/'+C.kkKey+'?protocol=7&client=js&version=8.4.0&flash=false',{label:'Kick',retry:connectKick,
+    msg(ws,raw){
+      let d; try{ d=JSON.parse(raw); }catch(e){ return; }
+      if(d.event==='pusher:connection_established'){ ws.send(JSON.stringify({event:'pusher:subscribe',data:{auth:'',channel:'chatrooms.'+room+'.v2'}})); return; }
+      if(d.event==='pusher_internal:subscription_succeeded'){ status('Kick','connected'); return; }
+      if(d.event==='pusher:ping'){ ws.send(JSON.stringify({event:'pusher:pong',data:{}})); return; }
+      let x; try{ x=typeof d.data==='string'?JSON.parse(d.data):d.data; }catch(e){ return; }
+      if(!x) return;
+      if(d.event==='App\\Events\\ChatMessageEvent'){
+        const s=x.sender||{}, idn=s.identity||{}, bt=(idn.badges||[]).map(b=>b.type);
+        ingest({platform:'kick',user:s.username,login:pick(s.slug,s.username),color:idn.color,text:x.content,
+          avatar:pick(s.profile_pic,s.profilePicture),msgId:x.id,userId:s.id,mod:bt.includes('moderator'),bc:bt.includes('broadcaster')});
+      }else if(d.event==='App\\Events\\MessageDeletedEvent'){ removeWhere('mid','kick:'+(x.message&&x.message.id)); }
+      else if(d.event==='App\\Events\\UserBannedEvent'){ removeWhere('uid','kick:'+(x.user&&x.user.id)); }
+      else if(d.event==='App\\Events\\ChatroomClearEvent'){ clearPlatform('kick'); }
+    }});
+}
+/* TikTok through TikFinity's local WebSocket */
+function connectTT(){
+  if(C.ttRoute!=='tikfinity') return;
+  status('TikTok','connecting…');
+  openWS('tt','ws://localhost:'+C.ttPort+'/',{label:'TikTok',retry:connectTT,
+    open(){ status('TikTok','connected'); },
+    msg(ws,raw){
+      let d; try{ d=JSON.parse(raw); }catch(e){ return; }
+      if(d.event!=='chat') return; const x=d.data||{};
+      ingest({platform:'tiktok',user:pick(x.nickname,x.uniqueId),login:pick(x.uniqueId,x.nickname),text:x.comment||'',
+        avatar:x.profilePictureUrl,msgId:x.msgId,userId:x.userId,mod:!!x.isModerator});
+    }});
+}
+function connectAll(){
+  Object.keys(conns).forEach(closeWS);
+  Object.keys(STATUS).forEach(k=>delete STATUS[k]); status('_',null);
+  loadEmotes(); connectSB(); connectTwitch(); connectKick(); connectTT();
+}
+
+/* ---------- demo messages ---------- */
+const KAPPA='https://static-cdn.jtvnw.net/emoticons/v2/25/default/dark/2.0';
+const DEMO=[
+  {platform:'twitch',user:'PilotKharak',color:'#FF4500',text:'o7 fleet, hyperspace jump in 3… 2… 🛰️',mod:true,badges:['https://static-cdn.jtvnw.net/badges/v1/3267646d-33f0-4b17-b3df-f923a41db1d0/2']},
+  {platform:'youtube',user:'Hiigaran Watch',text:'Catching the stream from YouTube tonight 👋'},
+  {platform:'kick',user:'CollectorBob',color:'#53FC18',text:'Resource collectors deployed, RUs incoming 💰'},
+  {platform:'twitch',user:'IonFrigateFan',color:'#1E90FF',text:'That ion cannon frigate is nasty Kappa',emotes:{Kappa:KAPPA}},
+  {platform:'tiktok',user:'kushan.drift',text:'first time here, what game is this? 🔥🔥'},
+  {platform:'twitch',self:true,user:'YourChannel',color:'#C8283C',text:'Welcome aboard, pilots. Fleet is holding at the rally point.',bc:true,badges:['https://static-cdn.jtvnw.net/badges/v1/5527c58c-fb7d-422d-b71b-f309dcb85cc1/2']},
+  {platform:'twitch',user:'SomtaawScout',color:'#9ACD32',text:'Kappa',emotes:{Kappa:KAPPA}},
+  {platform:'youtube',user:'Mothership Ops',text:'GG pilots o7 that was a clean engagement'},
+  {platform:'kick',user:'BentusiTrader',color:'#DAA520',text:'Trade convoy reporting in 🚀'},
+  {platform:'tiktok',user:'turanic.raider',text:'the rain mode is so clean 😎'}
+];
+let demoIdx=0;
+function demo(n){ for(let i=0;i<(n||1);i++){ setTimeout(()=>{
+  const m=JSON.parse(JSON.stringify(DEMO[demoIdx++%DEMO.length])); m.t=Date.now();
+  if(m.self){ const nm=String(C.twChannel||'').split(',')[0].trim()||String(C.kkChannel||'').trim(); m.user=nm||'YourChannel'; m.login=nm?nm.toLowerCase():'yourchannel'; }
+  ingest(m); }, i*(isFlow()?450:120)); } }
+
+/* ---------- overlay boot ---------- */
+let reconT=null;
+function onOverlayMsg(e){
+  const d=e.data||{};
+  if(d.type==='mc-cfg'){
+    const prev=C; C=Object.assign({},D,d.cfg||{});
+    applyStyle();
+    if(prev.mode!==C.mode) $('#chat').innerHTML='';
+    else if(prev.dir!==C.dir&&!isFlow()){ const ch=$('#chat'); [...ch.children].reverse().forEach(x=>ch.append(x)); }
+    rerenderAll();
+    if(CONN_KEYS.some(k=>prev[k]!==C[k])){ clearTimeout(reconT); reconT=setTimeout(connectAll,700); }
+  }else if(d.type==='mc-test') demo(d.n||1);
+  else if(d.type==='mc-clear') $('#chat').innerHTML='';
+}
+function bootOverlay(){
+  document.body.classList.add('overlay');
+  C=Object.assign({},D,decode(location.hash));
+  applyStyle(); connectAll();
+  let rt=null; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(applyStyle,120); });
+  window.addEventListener('message',onOverlayMsg);
+  if(IS_PV) setTimeout(()=>demo(6),300);
+  else if(Q.has('demo')) demo(8);
+}
+
+/* =================== SETTINGS PAGE =================== */
+const fontOpts=Object.keys(FONTS).map(f=>[f,f]).concat([['system','System font (Segoe UI)'],['custom','A font installed on this PC']]);
+const weightOpts=[['400','Regular'],['500','Medium'],['600','Semibold'],['700','Bold'],['800','Extra bold']];
+const routeOpts=[['sb','Through Streamer.bot'],['direct','Direct (no Streamer.bot needed)'],['off','Off']];
+const usesSB=c=>c.twRoute==='sb'||c.kkRoute==='sb'||c.ytRoute==='sb';
+const flow=c=>has(FLOW,c.mode), stackMode=c=>!flow(c);
+const RES=[['1920x1080','1920 × 1080 (1080p, most common)'],['1280x720','1280 × 720 (720p)'],['1600x900','1600 × 900 (900p)'],
+  ['1664x936','1664 × 936 (936p)'],['2560x1440','2560 × 1440 (1440p)'],['3840x2160','3840 × 2160 (4K)'],
+  ['2560x1080','2560 × 1080 (ultrawide)'],['3440x1440','3440 × 1440 (ultrawide 1440p)'],
+  ['1080x1920','1080 × 1920 (vertical, TikTok and Shorts)'],['720x1280','720 × 1280 (vertical 720p)'],['custom','Custom size']];
+const ANIM_OPTS=[['slide','Slide in from the side'],['up','Rise up'],['down','Drop down'],['fade','Fade in'],['pop','Pop'],
+  ['zoom','Zoom in from big'],['bounce','Bounce'],['elastic','Elastic stretch'],['flip','Flip down (3D)'],['swing','Swing open like a door (3D)'],
+  ['spin','Spin in'],['blur','Blur into focus'],['glitch','Glitch'],['type','Typewriter reveal'],['wipe','Wipe up'],
+  ['warp','Hyperspace warp'],['jelly','Jelly wobble'],['unfold','Unfold'],['flicker','Neon flicker'],['slam','Slam with shake'],['none','None']];
+const EXIT_OPTS=[['fade','Fade out'],['slide','Slide out to the side'],['shrink','Shrink away'],['drop','Drop and fade'],['up','Float up and fade'],
+  ['blur','Blur away'],['warp','Hyperspace warp out'],['none','Disappear instantly']];
+const SECTIONS=[
+  {t:'Chat sources',open:true,items:[
+    {k:'twRoute',l:'Twitch',type:'select',opts:routeOpts},
+    {k:'twChannel',l:'Twitch channel',type:'text',show:c=>c.twRoute!=='off',help:'Used for 7TV, BetterTTV and FrankerFaceZ emotes and badges. Direct mode can read several channels, separated by commas.'},
+    {k:'kkRoute',l:'Kick',type:'select',opts:routeOpts},
+    {k:'kkChannel',l:'Kick channel',type:'text',show:c=>c.kkRoute==='direct'},
+    {k:'kkRoom',l:'Kick chatroom ID',type:'text',show:c=>c.kkRoute==='direct',help:'Only needed if Kick shows "enter the chatroom ID". Open kick.com/api/v2/channels/yourname in a browser and copy the number in "chatroom":{"id": …'},
+    {k:'ytRoute',l:'YouTube',type:'select',opts:[['sb','Through Streamer.bot'],['off','Off']],help:'YouTube chat only flows while a broadcast is live and connected in Streamer.bot.'},
+    {k:'ttRoute',l:'TikTok',type:'select',opts:[['tikfinity','Through TikFinity'],['off','Off']]},
+    {k:'ttPort',l:'TikFinity WebSocket port',type:'num',show:c=>c.ttRoute!=='off',help:'TikFinity must be open and connected to your TikTok LIVE.'}
+  ]},
+  {t:'Streamer.bot connection',show:usesSB,items:[
+    {k:'sbHost',l:'Address',type:'text',help:'Use 127.0.0.1 when Streamer.bot runs on the same PC as OBS.'},
+    {k:'sbPort',l:'Port',type:'num',help:'Streamer.bot → Servers/Clients → WebSocket Server. Default is 8080.'},
+    {k:'sbPass',l:'Password',type:'pass',help:'Leave blank unless you turned on authentication for the WebSocket Server. The password is saved inside your overlay link, so keep that link private.'}
+  ]},
+  {t:'Screen and position',open:true,items:[
+    {k:'res',l:'Stream resolution',type:'select',opts:RES,after:resChanged},
+    {k:'canvasW',l:'Custom width',type:'num',show:c=>c.res==='custom'},
+    {k:'canvasH',l:'Custom height',type:'num',show:c=>c.res==='custom'},
+    {k:'_anchors',l:'Quick position',type:'anchors'},
+    {k:'_box',l:'Chat area in pixels',type:'boxgrid',help:'Or drag the dashed box in the preview. Drag its corners and edges to resize. Arrow keys nudge it, Shift + arrows resize it.'},
+    {k:'anchorMargin',l:'Gap from screen edge for quick position',type:'range',min:0,max:120,step:2,unit:'px'},
+    {k:'autoScale',l:'Scale text with resolution',type:'toggle',help:'Keeps chat the same size on screen at 720p, 1440p or 4K. Sizes in these settings are for 1080p.'}
+  ]},
+  {t:'Display mode',open:true,items:[
+    {k:'mode',l:'How chat moves',type:'select',opts:[['stack','Classic list'],['rain','Matrix rain (falls down the screen)'],['rise','Float up (rises to the top)'],['ltr','Scroll left to right'],['rtl','Scroll right to left'],['scatter','Pop up at random spots']]},
+    {k:'flowSecs',l:'Time on screen',type:'range',min:3,max:40,step:.5,unit:'s',show:flow,help:'How long each message takes to cross the screen. Higher is slower.'},
+    {k:'flowVar',l:'Speed variety',type:'range',min:0,max:60,step:5,unit:'%',show:flow,help:'Lets some messages drift faster or slower than others.'},
+    {k:'flowMax',l:'Messages on screen at once',type:'range',min:3,max:60,step:1,show:flow},
+    {k:'rainBg',l:'Digital rain background',type:'toggle',help:'Falling code characters behind your chat. Works in any mode.'},
+    {k:'rainArea',l:'Rain covers',type:'select',show:c=>c.rainBg,opts:[['box','Just the chat area'],['screen','The whole screen']]},
+    {k:'rainColor',l:'Rain color',type:'color',show:c=>c.rainBg},
+    {k:'rainAlpha',l:'Rain strength',type:'range',min:.05,max:1,step:.05,show:c=>c.rainBg},
+    {k:'rainSpeed',l:'Rain speed',type:'range',min:.3,max:3,step:.1,unit:'×',show:c=>c.rainBg}
+  ]},
+  {t:'Layout',items:[
+    {k:'dir',l:'Message order',type:'select',show:stackMode,opts:[['bottom','Newest at the bottom'],['top','Newest at the top']]},
+    {k:'align',l:'Text alignment',type:'select',opts:[['left','Left'],['right','Right'],['full','Full width']]},
+    {k:'layout',l:'Name placement',type:'select',opts:[['inline','Name and message on one line'],['stacked','Name above the message']]},
+    {k:'maxMsgs',l:'Messages on screen',type:'range',min:3,max:100,step:1,show:stackMode},
+    {k:'life',l:'Remove messages after',type:'range',min:0,max:600,step:5,unit:'s',show:stackMode,help:'0 keeps each message until newer ones push it out.'},
+    {k:'maxW',l:'Message max width',type:'range',min:20,max:100,step:1,unit:'%'},
+    {k:'gap',l:'Space between messages',type:'range',min:0,max:30,step:1,unit:'px',show:stackMode}
+  ]},
+  {t:'Animations',show:stackMode,items:[
+    {k:'anim',l:'Entrance',type:'select',opts:ANIM_OPTS,help:'A test message plays each time you pick one. Moving display modes use their own motion instead.'},
+    {k:'animMs',l:'Entrance speed',type:'range',min:100,max:2000,step:50,unit:'ms',show:c=>c.anim!=='none'},
+    {k:'exitAnim',l:'Exit',type:'select',opts:EXIT_OPTS,help:'Plays when a message times out or a mod deletes it.'},
+    {k:'exitMs',l:'Exit speed',type:'range',min:100,max:1500,step:50,unit:'ms',show:c=>c.exitAnim!=='none'}
+  ]},
+  {t:'Bubbles and boxes',items:[
+    {k:'shape',l:'Shape',type:'select',opts:[['box','Box'],['pill','Rounded pill'],['speech','Speech bubble'],['cut','Cut-corner sci-fi panel']]},
+    {k:'boxMode',l:'Bubble color',type:'select',opts:[['single','One color for all'],['user',"Each chatter's color"],['platform','Their platform color'],['palette','Colors from my palette']]},
+    {k:'bgColor',l:'Bubble color',type:'color',show:c=>c.boxMode==='single'},
+    {k:'palette',l:'Palette colors',type:'palette',show:c=>c.boxMode==='palette',help:'Hex colors separated by commas. Add as many as you like.'},
+    {k:'paletteBy',l:'Hand out palette colors',type:'select',show:c=>c.boxMode==='palette',opts:[['user','Same color for each chatter'],['message','Next color for every message']]},
+    {k:'bgAlpha',l:'Bubble opacity',type:'range',min:0,max:1,step:.02},
+    {k:'autoText',l:'Pick readable text color automatically',type:'toggle',show:c=>c.boxMode!=='single',help:'Switches text to black or white based on each bubble color.'},
+    {k:'shine',l:'Glossy shine',type:'toggle'},
+    {k:'blur',l:'Blur behind the bubble',type:'range',min:0,max:24,step:1,unit:'px',help:'Frosted-glass look over gameplay. Uses a little extra GPU in OBS.'},
+    {k:'radius',l:'Corner rounding',type:'range',min:0,max:32,step:1,unit:'px',show:c=>c.shape==='box'||c.shape==='speech'},
+    {k:'borderSide',l:'Border',type:'select',opts:[['side','Edge bar on the chat side'],['all','Full border'],['bottom','Underline'],['none','No border']]},
+    {k:'borderW',l:'Border thickness',type:'range',min:1,max:8,step:1,unit:'px',show:c=>c.borderSide!=='none'},
+    {k:'accent',l:'Color the border by platform',type:'toggle',show:c=>c.borderSide!=='none'},
+    {k:'borderColor',l:'Border color',type:'color',show:c=>c.borderSide!=='none'&&!c.accent},
+    {k:'padX',l:'Inner space, sides',type:'range',min:0,max:32,step:1,unit:'px'},
+    {k:'padY',l:'Inner space, top and bottom',type:'range',min:0,max:24,step:1,unit:'px'}
+  ]},
+  {t:'Profile pictures',items:[
+    {k:'avatars',l:'Show profile pictures',type:'toggle',help:'Twitch, YouTube and TikTok pictures load automatically. Kick shows them through Streamer.bot when available.'},
+    {k:'avatarPos',l:'Placement',type:'select',show:c=>c.avatars,opts:[['inline','Next to the name'],['side','Beside the whole message']]},
+    {k:'avatarShape',l:'Shape',type:'select',show:c=>c.avatars,opts:[['circle','Circle'],['rounded','Rounded square'],['square','Square']]},
+    {k:'avatarSize',l:'Size',type:'range',min:1,max:4,step:.1,unit:'×',show:c=>c.avatars},
+    {k:'avatarFallback',l:'Show initials when there is no picture',type:'toggle',show:c=>c.avatars}
+  ]},
+  {t:'Fonts and text',items:[
+    {k:'nameFont',l:'Name font',type:'select',opts:fontOpts,font:true},
+    {k:'msgFont',l:'Message font',type:'select',opts:fontOpts,font:true},
+    {k:'customFont',l:'Installed font name',type:'text',show:c=>c.nameFont==='custom'||c.msgFont==='custom',help:'Type it exactly as Windows lists it, e.g. Bahnschrift.'},
+    {k:'fs',l:'Text size',type:'range',min:10,max:64,step:1,unit:'px'},
+    {k:'nameScale',l:'Name size',type:'range',min:50,max:180,step:1,unit:'%'},
+    {k:'nameW',l:'Name weight',type:'select',opts:weightOpts},
+    {k:'msgW',l:'Message weight',type:'select',opts:weightOpts},
+    {k:'lh',l:'Line height',type:'range',min:1,max:2,step:.05},
+    {k:'ls',l:'Letter spacing',type:'range',min:-1,max:4,step:.1,unit:'px'},
+    {k:'upper',l:'Names in capitals',type:'toggle'},
+    {k:'textColor',l:'Message color',type:'color'}
+  ]},
+  {t:'Names',items:[
+    {k:'nameStyle',l:'Name style',type:'select',opts:[['text','Colored text'],['tag','Colored name tag']]},
+    {k:'nameMode',l:'Name color',type:'select',opts:[['user',"Each chatter's own color"],['platform','Their platform color'],['custom','One color for everyone']]},
+    {k:'nameCustom',l:'Color for every name',type:'color',show:c=>c.nameMode==='custom'},
+    {k:'brighten',l:'Lighten dark name colors',type:'toggle',show:c=>c.nameMode==='user',help:'Keeps navy and dark red names readable on dark backgrounds. Turn off for light bubbles.'}
+  ]},
+  {t:'Outline and shadow',items:[
+    {k:'outline',l:'Outline thickness',type:'range',min:0,max:6,step:.5,unit:'px'},
+    {k:'outlineColor',l:'Outline color',type:'color',show:c=>+c.outline>0},
+    {k:'shadow',l:'Shadow or glow',type:'range',min:0,max:24,step:1,unit:'px',help:'Use a bright color for a glow.'},
+    {k:'shadowColor',l:'Shadow color',type:'color',show:c=>+c.shadow>0}
+  ]},
+  {t:'Emotes and emoji',items:[
+    {k:'stv',l:'7TV emotes',type:'toggle'},
+    {k:'bttv',l:'BetterTTV emotes',type:'toggle'},
+    {k:'ffz',l:'FrankerFaceZ emotes',type:'toggle'},
+    {k:'emAll',l:'Show those emotes on every platform',type:'toggle',help:'So a Kick or YouTube chatter typing an emote name gets the picture too.'},
+    {k:'emoteScale',l:'Emote size',type:'range',min:1,max:4,step:.1,unit:'×'},
+    {k:'bigEmote',l:'Enlarge emote-only messages',type:'toggle'},
+    {k:'emoji',l:'Emoji style',type:'select',opts:[['native','System emoji'],['twemoji','Twemoji (same look on every PC)']]}
+  ]},
+  {t:'Badges and highlights',items:[
+    {k:'plat',l:'Platform marker',type:'select',opts:[['pill','Name tag (Twitch, Kick…)'],['dot','Colored dot'],['none','Hidden']]},
+    {k:'badges',l:'Show chat badges',type:'toggle'},
+    {k:'time',l:'Show time sent',type:'toggle'},
+    {k:'roleHi',l:'Highlight the streamer and mods',type:'toggle'},
+    {k:'hiWords',l:'Also highlight messages containing',type:'text',help:'Separate with commas, e.g. your name, o7'},
+    {k:'hiColor',l:'Highlight color',type:'color'}
+  ]},
+  {t:'Platform colors',items:[
+    {k:'colTw',l:'Twitch',type:'color'},{k:'colYt',l:'YouTube',type:'color'},
+    {k:'colKk',l:'Kick',type:'color'},{k:'colTt',l:'TikTok',type:'color'}
+  ]},
+  {t:'Filters',items:[
+    {k:'hideBots',l:'Hide bots',type:'toggle'},
+    {k:'bots',l:'Bot names',type:'area',show:c=>c.hideBots},
+    {k:'hideCmd',l:'Hide !commands',type:'toggle'},
+    {k:'blockUsers',l:'Hide these chatters',type:'area',help:'Separate with commas.'},
+    {k:'blockWords',l:'Hide messages containing',type:'area',help:'Separate with commas. Matches anywhere in the message.'},
+    {k:'links',l:'Links',type:'select',opts:[['show','Show links'],['mask','Replace links with [link]'],['hide','Hide messages with links']]},
+    {k:'maxLen',l:'Shorten messages longer than',type:'range',min:0,max:500,step:10,unit:' chars',help:'0 never shortens.'}
+  ]},
+  {t:'Advanced',items:[
+    {k:'status',l:'Show connection status on the overlay',type:'toggle',help:'Handy while testing in OBS. Turn off before going live.'},
+    {k:'kkKey',l:'Kick socket key',type:'text',show:c=>c.kkRoute==='direct',help:'Only change if Kick updates its chat socket.'},
+    {k:'kkCluster',l:'Kick socket cluster',type:'text',show:c=>c.kkRoute==='direct'}
+  ]}
+];
+const ROWS=[], SECS=[];
+function mk(tag,cls){ const e=document.createElement(tag); if(cls) e.className=cls; return e; }
+function fmt(it,v){ const n=+v; const s=(it.step&&it.step<1)?n.toFixed(String(it.step).split('.')[1].length):String(n); return s+(it.unit||''); }
+function drawSwatches(box){ box.innerHTML=''; paletteList().forEach(c=>{ const s=mk('span'); s.style.background=c; box.append(s); }); }
+function buildControls(){
+  const host=$('#controls');
+  SECTIONS.forEach(sec=>{
+    const det=mk('details','sec'); if(sec.open) det.open=true;
+    const sm=mk('summary'); sm.textContent=sec.t; det.append(sm);
+    const rows=mk('div','rows'); det.append(rows); host.append(det); SECS.push({sec,el:det});
+    sec.items.forEach(it=>{
+      const row=mk('div','row'), id='f_'+it.k; let input, out;
+      if(it.type==='anchors'){
+        const lab=mk('div','lbl'); lab.textContent=it.l; row.append(lab);
+        const wrap=mk('div','anchorwrap'), g=mk('div','anchors');
+        [['t','l','↖','Top left'],['t','c','↑','Top center'],['t','r','↗','Top right'],['c','l','←','Middle left'],['c','c','•','Center'],['c','r','→','Middle right'],['b','l','↙','Bottom left'],['b','c','↓','Bottom center'],['b','r','↘','Bottom right']]
+          .forEach(a=>{ const b=mk('button'); b.type='button'; b.textContent=a[2]; b.title=a[3]; b.setAttribute('aria-label','Move chat to '+a[3].toLowerCase()); b.onclick=()=>anchorBox(a[0],a[1]); g.append(b); });
+        const full=mk('button','btn'); full.type='button'; full.textContent='Fill screen'; full.onclick=()=>{ Object.assign(C,BOX_FULL); syncControls(); changed(); };
+        wrap.append(g,full); row.append(wrap); rows.append(row); ROWS.push({it,row}); return;
+      }
+      if(it.type==='boxgrid'){
+        const lab=mk('div','lbl'); lab.textContent=it.l; row.append(lab);
+        const g=mk('div','boxgrid'), inputs={};
+        [['boxX','Left','x'],['boxY','Top','y'],['boxW','Width','x'],['boxH','Height','y']].forEach(f=>{
+          const cell=mk('div'), l=mk('label'), inp=mk('input'); const fid='f_'+f[0];
+          l.htmlFor=fid; l.textContent=f[1]+' (px)'; inp.type='number'; inp.id=fid; inp.min=0;
+          inp.addEventListener('input',()=>{ const dim=f[2]==='x'?C.canvasW:C.canvasH; C[f[0]]=+(Math.max(0,+inp.value||0)/dim*100).toFixed(3); clampBox(); drawBox(); changed(); });
+          inp.addEventListener('change',()=>syncBoxInputs());
+          cell.append(l,inp); g.append(cell); inputs[f[0]]={inp,axis:f[2]};
+        });
+        row.append(g); boxInputs=inputs;
+        if(it.help){ const p=mk('p','help'); p.textContent=it.help; row.append(p); }
+        rows.append(row); ROWS.push({it,row}); return;
+      }
+      if(it.type==='toggle'){
+        const lab=mk('label','toggle'); lab.htmlFor=id; const t=mk('span'); t.textContent=it.l;
+        input=mk('input'); input.type='checkbox'; input.id=id; lab.append(t,input); row.append(lab);
+        input.addEventListener('change',()=>{ C[it.k]=input.checked; changed(); });
+      }else{
+        const lab=mk('label','lbl'); lab.htmlFor=id; const t=mk('span'); t.textContent=it.l; lab.append(t);
+        if(it.type==='range'){ out=mk('output'); lab.append(out); }
+        row.append(lab);
+        if(it.type==='select'){
+          input=mk('select'); it.opts.forEach(o=>{ const op=mk('option'); op.value=o[0]; op.textContent=o[1]; if(it.font&&has(FONTS,o[0])) op.style.fontFamily="'"+o[0]+"'"; input.append(op); });
+          input.addEventListener('change',()=>{ const prev=Object.assign({},C); C[it.k]=input.value; if(it.after) it.after(prev); changed(); });
+        }else if(it.type==='range'){
+          input=mk('input'); input.type='range'; input.min=it.min; input.max=it.max; input.step=it.step;
+          input.addEventListener('input',()=>{ C[it.k]=+input.value; out.textContent=fmt(it,input.value); changed(); });
+        }else if(it.type==='color'){
+          const wrap=mk('div','colorrow'); input=mk('input'); input.type='color'; const code=mk('code'); wrap.append(input,code); row.append(wrap); out=code;
+          input.addEventListener('input',()=>{ C[it.k]=input.value.toUpperCase(); code.textContent=C[it.k]; changed(); });
+        }else if(it.type==='area'||it.type==='palette'){
+          input=mk('textarea');
+          if(it.type==='palette'){ out=mk('div','swatches'); }
+          input.addEventListener('input',()=>{ C[it.k]=input.value; if(out) drawSwatches(out); changed(); });
+        }else{
+          input=mk('input'); input.type=it.type==='pass'?'password':it.type==='num'?'number':'text'; input.spellcheck=false; input.autocomplete='off';
+          input.addEventListener('input',()=>{ C[it.k]=it.type==='num'?(+input.value||0):input.value; changed(); });
+        }
+        input.id=id; if(it.type!=='color') row.append(input);
+        if(it.type==='palette') row.append(out);
+      }
+      if(it.help){ const p=mk('p','help'); p.textContent=it.help; row.append(p); }
+      rows.append(row); ROWS.push({it,row,input,out});
+    });
+  });
+}
+function syncControls(){
+  syncBoxInputs();
+  ROWS.forEach(r=>{ if(!r.input) return; const v=C[r.it.k];
+    if(r.it.type==='toggle') r.input.checked=!!v; else r.input.value=v;
+    if(r.it.type==='range') r.out.textContent=fmt(r.it,v);
+    if(r.it.type==='color') r.out.textContent=String(v).toUpperCase();
+    if(r.it.type==='palette') drawSwatches(r.out);
+  });
+  refreshVisibility();
+}
+function refreshVisibility(){
+  ROWS.forEach(r=>{ r.row.hidden=!!(r.it.show&&!r.it.show(C)); });
+  SECS.forEach(s=>{ s.el.hidden=!!(s.sec.show&&!s.sec.show(C)); });
+}
+/* ---------- chat area (position and size, stored as % of the screen) ---------- */
+let boxInputs=null;
+const r3=v=>Math.round(v*1000)/1000, clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+function clampBox(){
+  C.boxW=r3(clamp(+C.boxW,2,100)); C.boxH=r3(clamp(+C.boxH,2,100));
+  C.boxX=r3(clamp(+C.boxX,0,100-C.boxW)); C.boxY=r3(clamp(+C.boxY,0,100-C.boxH));
+}
+function syncBoxInputs(){
+  if(!boxInputs) return;
+  Object.keys(boxInputs).forEach(k=>{ const b=boxInputs[k]; if(document.activeElement===b.inp) return;
+    b.inp.value=Math.round(C[k]/100*(b.axis==='x'?C.canvasW:C.canvasH)); });
+}
+function anchorBox(ay,ax){
+  const mx=C.anchorMargin/C.canvasW*100, my=C.anchorMargin/C.canvasH*100;
+  if(C.boxW>=99.9) C.boxW=Math.min(C.boxW,100-2*mx);
+  if(C.boxH>=99.9) C.boxH=Math.min(C.boxH,100-2*my);
+  C.boxX=ax==='l'?mx:ax==='c'?(100-C.boxW)/2:100-C.boxW-mx;
+  C.boxY=ay==='t'?my:ay==='c'?(100-C.boxH)/2:100-C.boxH-my;
+  clampBox(); syncControls(); changed();
+}
+function resChanged(prev){
+  if(C.res!=='custom'){ const d=C.res.split('x').map(Number); C.canvasW=d[0]; C.canvasH=d[1]; }
+  const wasP=prev.canvasH>prev.canvasW, isP=C.canvasH>C.canvasW;
+  if(wasP!==isP&&!(C.boxW>=99.9&&C.boxH>=99.9)) Object.assign(C,isP?BOX_PORTRAIT:BOX_COL);
+  syncControls();
+}
+function drawBox(){
+  const b=$('#box'); if(!b) return;
+  b.style.left=C.boxX+'%'; b.style.top=C.boxY+'%'; b.style.width=C.boxW+'%'; b.style.height=C.boxH+'%';
+  b.querySelector('.boxtag').textContent='Chat area  '+Math.round(C.boxW/100*C.canvasW)+' × '+Math.round(C.boxH/100*C.canvasH);
+}
+function setBox(x,y,w,h,mode){
+  const snap=$('#snap').checked, W=C.canvasW, H=C.canvasH;
+  const sx=v=>snap?Math.round(v*W/1000)*1000/W:v, sy=v=>snap?Math.round(v*H/1000)*1000/H:v; // 10px steps
+  if(mode==='move'){ x=sx(x); y=sy(y); w=C.boxW; h=C.boxH; x=clamp(x,0,100-w); y=clamp(y,0,100-h); }
+  else{
+    const right=x+w, bottom=y+h;
+    if(mode.includes('w')){ x=clamp(sx(x),0,right-2); w=right-x; } else if(mode.includes('e')){ w=clamp(sx(right)-x,2,100-x); }
+    if(mode.includes('n')){ y=clamp(sy(y),0,bottom-2); h=bottom-y; } else if(mode.includes('s')){ h=clamp(sy(bottom)-y,2,100-y); }
+  }
+  C.boxX=r3(x); C.boxY=r3(y); C.boxW=r3(w); C.boxH=r3(h);
+  drawBox(); syncBoxInputs(); changed();
+}
+function initAdjuster(){
+  const box=$('#box'), frame=$('#frame'); let st=null;
+  box.addEventListener('pointerdown',e=>{
+    e.preventDefault(); const r=frame.getBoundingClientRect();
+    st={h:e.target.dataset.h||'move',x0:e.clientX,y0:e.clientY,fw:r.width,fh:r.height,b:{x:C.boxX,y:C.boxY,w:C.boxW,h:C.boxH}};
+    box.setPointerCapture(e.pointerId); box.classList.add('drag'); box.focus({preventScroll:true});
+  });
+  box.addEventListener('pointermove',e=>{
+    if(!st) return;
+    const dx=(e.clientX-st.x0)/st.fw*100, dy=(e.clientY-st.y0)/st.fh*100, b=st.b;
+    if(st.h==='move') setBox(b.x+dx,b.y+dy,b.w,b.h,'move');
+    else setBox(b.x+(st.h.includes('w')?dx:0),b.y+(st.h.includes('n')?dy:0),b.w+(st.h.includes('e')?dx:0),b.h+(st.h.includes('s')?dy:0),st.h);
+  });
+  const end=()=>{ st=null; box.classList.remove('drag'); };
+  box.addEventListener('pointerup',end); box.addEventListener('pointercancel',end);
+  box.addEventListener('keydown',e=>{
+    const k={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key]; if(!k) return;
+    e.preventDefault(); const sx=10/C.canvasW*100*k[0], sy=10/C.canvasH*100*k[1];
+    if(e.shiftKey){ C.boxW+=sx; C.boxH+=sy; } else { C.boxX+=sx; C.boxY+=sy; }
+    clampBox(); drawBox(); syncBoxInputs(); changed();
+  });
+  $('#showArea').onchange=e=>{ $('#adj').hidden=!e.target.checked; };
+  drawBox();
+}
+const pageBase=()=>location.href.split(/[?#]/)[0];
+function overlayURL(){ const d=diff(C); const h=Object.keys(d).length?'#cfg='+encode(d):''; return pageBase()+'?overlay'+h; }
+let postT=null, lastMode=null, lastAnim=null, lastCanvas=null;
+function changed(){
+  try{ localStorage.setItem(STORE,JSON.stringify(C)); }catch(e){}
+  refreshVisibility();
+  $('#ovUrl').value=overlayURL();
+  clearTimeout(postT); postT=setTimeout(()=>{
+    post({type:'mc-cfg',cfg:C});
+    if(lastMode!==C.mode){ lastMode=C.mode; if(C.mode!=='stack') setTimeout(()=>post({type:'mc-test',n:8}),120); }
+    if(lastAnim!==C.anim){ lastAnim=C.anim; if(C.mode==='stack') setTimeout(()=>post({type:'mc-test',n:1}),90); }
+  },40);
+  drawBox();
+  const cv=C.canvasW+'x'+C.canvasH; if(cv!==lastCanvas){ lastCanvas=cv; fitPreview(); }
+}
+function post(msg){ const w=$('#pv').contentWindow; if(w) w.postMessage(msg,'*'); }
+function renderStatus(st){
+  const box=$('#statusChips'); box.innerHTML='';
+  const keys=Object.keys(st||{});
+  if(!keys.length){ const c=mk('span','chip'); c.textContent='No live sources on'; box.append(c); return; }
+  keys.forEach(k=>{ const c=mk('span','chip'); const v=st[k]; c.textContent=k+': '+v; c.classList.add(v==='connected'?'ok':'warn'); box.append(c); });
+}
+function fitPreview(){
+  const w=Math.max(100,+C.canvasW||1920), h=Math.max(100,+C.canvasH||1080);
+  const vp=$('#viewport'), aw=vp.clientWidth-60, ah=vp.clientHeight-110;
+  const s=Math.min(1,aw/w,ah/h);
+  const f=$('#frame'), fr=$('#pv');
+  f.style.width=Math.round(w*s)+'px'; f.style.height=Math.round(h*s)+'px';
+  fr.style.width=w+'px'; fr.style.height=h+'px'; fr.style.transform='scale('+s+')';
+  $('#dims').textContent=w+' × '+h+' stream canvas'+(s<1?'  (shown at '+Math.round(s*100)+'%)':'');
+  drawBox();
+}
+function initConfig(){
+  document.body.classList.add('cfg'); $('#app').hidden=false;
+  let saved={}; try{ saved=JSON.parse(localStorage.getItem(STORE)||localStorage.getItem('fleet-multichat')||'{}'); }catch(e){}
+  if(!Object.keys(saved).length) $('#guide').open=true;
+  C=Object.assign({},D,saved,decode(location.hash));
+  lastMode=C.mode; lastAnim=C.anim; lastCanvas=C.canvasW+'x'+C.canvasH;
+  const l=document.createElement('link'); l.rel='stylesheet';
+  l.href='https://fonts.googleapis.com/css2?'+Object.keys(FONTS).map(f=>'family='+f.replace(/ /g,'+')+(FONTS[f]?':wght@'+FONTS[f]:'')).join('&')+'&display=swap';
+  document.head.appendChild(l); Object.keys(FONTS).forEach(f=>loadedFonts.add(f));
+
+  Object.keys(PRESETS).forEach(k=>{ const o=mk('option'); o.value=k; o.textContent=PRESETS[k].label; $('#presetSel').append(o); });
+  $('#presetApply').onclick=()=>{
+    const v=PRESETS[$('#presetSel').value].v, keep=$('#keepPos').checked, saveBox={boxX:C.boxX,boxY:C.boxY,boxW:C.boxW,boxH:C.boxH};
+    Object.assign(C,LOOK_RESET,v);
+    if(keep) Object.assign(C,saveBox);
+    else Object.assign(C,has(FLOW,C.mode)?BOX_FULL:(C.canvasH>C.canvasW?BOX_PORTRAIT:BOX_COL));
+    syncControls(); changed(); };
+
+  buildControls(); syncControls(); initAdjuster();
+  $('#fileNote').hidden=location.protocol!=='file:';
+  $('#ovUrl').value=overlayURL();
+  $('#pv').src=pageBase()+'?overlay&preview#cfg='+encode(diff(C));
+  $('#pv').addEventListener('load',()=>setTimeout(()=>post({type:'mc-cfg',cfg:C}),50));
+  window.addEventListener('message',e=>{ if(e.data&&e.data.type==='mc-status') renderStatus(e.data.status); });
+
+  $('#testOne').onclick=()=>post({type:'mc-test',n:1});
+  $('#testMany').onclick=()=>post({type:'mc-test',n:8});
+  $('#testClear').onclick=()=>post({type:'mc-clear'});
+  $('#copyUrl').onclick=async()=>{ const b=$('#copyUrl'); const u=overlayURL();
+    try{ await navigator.clipboard.writeText(u); }catch(e){ $('#ovUrl').select(); document.execCommand('copy'); }
+    b.textContent='Copied'; setTimeout(()=>b.textContent='Copy link',1400); };
+  $('#openOv').onclick=()=>window.open(overlayURL()+(overlayURL().includes('#')?'':'')+'','_blank');
+  $('#savePreset').onclick=()=>{ const blob=new Blob([JSON.stringify(C,null,2)],{type:'application/json'});
+    const a=mk('a'); a.href=URL.createObjectURL(blob); a.download='hyperwave-chat-settings.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
+  $('#loadPreset').onclick=()=>$('#loadFile').click();
+  $('#loadFile').onchange=e=>{ const f=e.target.files[0]; if(!f) return; f.text().then(t=>{ try{ const o=JSON.parse(t); C=Object.assign({},D,o); syncControls(); changed(); }catch(err){ alert('That file is not a Hyperwave Chat settings file.'); } }); e.target.value=''; };
+  $('#resetAll').onclick=()=>{ if(!confirm('Reset every setting to the defaults?')) return; C=Object.assign({},D); syncControls(); changed(); };
+
+  const bg=$('#pvBg'); bg.onchange=()=>{ $('#viewport').className='viewport bg-'+bg.value; };
+  window.addEventListener('resize',fitPreview); fitPreview();
+  renderStatus({});
+}
+
+if(IS_OV) bootOverlay(); else initConfig();
+</script>
+</body>
+</html>
