@@ -2,7 +2,7 @@
 
 Every platform's chat in one OBS overlay. Free for any streamer to use. Made by [TaiiRepublic](https://twitch.tv/taiirepublic).
 
-**Open the app:** https://YOUR-GITHUB-NAME.github.io/hyperwave-chat/
+**Open the app:** https://TaiiRepublic.github.io/hyperwave-chat/
 
 ## What it does
 - Twitch with nothing to install, plus Kick, YouTube (through Streamer.bot) and TikTok (through TikFinity)
