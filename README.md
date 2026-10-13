@@ -1,9 +1,10 @@
 Hyperwave — Setup Guide
-Version 1.0.0. If something doesn't work, please click Send feedback in the About section at the bottom of the dashboard.
+Version 1.0.2. If something doesn't work, please click Send feedback in the About section at the bottom of the dashboard.
 Hyperwave is one small Windows app, HyperwaveStation.exe, that runs your stream's chat overlay and your music. It works with almost any music player: Spotify (Free or Premium), YouTube Music, Apple Music, a browser tab, and more. It gives you:
 Hyperwave Deck — a control panel for your stream on your PC, phone, tablet or Elgato Stream Deck: switch OBS scenes, clip, record, go live, mute, run your music, and read and reply to chat from every platform.
 Hyperwave Chat — Twitch, Kick, YouTube and TikTok chat in one OBS overlay, with emotes, 20 animations, rain and scrolling modes, bubbles, profile pictures, and new songs and song requests shown right in chat.
-Now Playing overlay for OBS — song, artist, album art, live progress bar, "requested by" name. Fonts, colours, sizes and 7 layouts are all yours to change.
+Now Playing overlay for OBS — song, artist, album art, live progress bar, "requested by" name. Fonts, colours, sizes and 8 layouts are all yours to change.
+Scene layouts — both overlays change look by themselves when you switch OBS scenes, and they run straight from the overlays folder even with Station closed.
 Song requests from Twitch channel points, Kick channel rewards, YouTube !sr, and TikTok (through TikFinity), all with the same rules.
 Remote DJ — a mod controls your music from any browser or phone: search, queue, playlists, play/pause, skip, volume, shuffle, devices.
 Mod chat commands — !skip !pause !play !vol 40 !playlist <name or link> !sron !sroff and more.
@@ -131,13 +132,18 @@ Starting looks
 Hyperwave · Clean light · Neon · Retro terminal · Glass · Minimal text · Vinyl lounge · Ticker · Retro desktop player · Synthwave · Arcade · Pastel pop · Sci-fi HUD · Monochrome
 Visualizer
 Style tab → Artwork & visualizer → Show in the artwork area: Album art, Visualizer, or Visualizer over dimmed album art. Styles: Bars, Mirror, Wave, Radial (spins around the album art), LED meter, Orb. You can pick the colour (accent, gradient, rainbow, match album art), the number of bars and the speed. The visualizer moves with play/pause and each song gets its own tempo and character, but music players don't let apps hear the audio, so it doesn't follow the real beat.
-Running it without the app (standalone, Spotify Premium only)
-The overlay also works on its own, e.g. hosted on GitHub Pages next to Hyperwave Chat:
-Upload for-github-pages/nowplaying.html to your GitHub Pages repo.
-Open it → Connect tab → Directly from Spotify → paste your Client ID.
-Add the page's address (e.g. https://yourname.github.io/hyperwave/nowplaying.html) as a second Redirect URI in your Spotify app.
-Click Connect Spotify, then copy the OBS link. That link contains your Spotify login — never show it on stream.
-Standalone shows the song and progress only. Requests, "requested by" names, pop-ups and the DJ deck need the app.
+Running it without the app
+The overlay can show your music with Hyperwave Station closed. Set the connection on the designer's Connect tab → Where the song info comes from:
+Choice
+What you need
+Directly from Last.fm
+Your Last.fm username and API key (see 2d). Works with any player that scrobbles. No progress bar.
+Directly from YouTube Music Desktop
+In the YouTube Music app, Plugins → API Server on. Click Connect YouTube Music, then Allow in the YouTube Music window.
+Directly from Spotify
+Spotify Premium and the page hosted online (GitHub Pages works). Paste your Client ID, add the page's address as a Redirect URI in your Spotify app, then Connect Spotify.
+Then copy the OBS link, or save a starting layout and load the overlay from the overlays folder (section 8b). The link and the starting layout contain your login or key, so never show them on stream or share them.
+Without the app the overlay shows the song only. Requests, "requested by" names, pop-ups and the DJ deck need the app.
 4. Song requests
 Rules (dashboard → Song requests)
 Setting
@@ -297,8 +303,36 @@ Style tab: click a starting style. Position tab: pick your stream resolution and
 Click Copy link. In OBS add a Browser source named Hyperwave Chat: untick Local file, paste the link into URL, Width 1920, Height 1080 (or your stream resolution), leave Shutdown source when not visible unticked. Then right-click it → Transform → Fit to screen.
 Changed something? Click Copy link again (the designer warns you when your OBS link is out of date), paste it into the source, then right-click it → Refresh.
 The Connection check on the Connect tab tells you if each source is working, and says "Real chat is arriving" once your viewers' messages come through.
-Prefer not to run the app? for-github-pages/index.html works on its own from any web host (GitHub Pages is free). Music messages still work from there whenever Station is running on the same PC.
+Prefer not to run the app? Load overlays\chat.html in OBS straight from the overlays folder (section 8b), or host for-github-pages/index.html on any web host (GitHub Pages is free). Music messages still show in chat whenever Station is running on the same PC.
 Upgrading from 0.9.1 or earlier: if you copied a chat.html into the web folder, delete it. Files in that folder replace the built-in pages, so an old copy would hide the new chat. Then copy your chat link again, because the designer now places chat on the whole screen: set the OBS source to your full stream size and use Fit to screen.
+8b. Overlays without Station, and a layout for each scene
+Hyperwave keeps both overlays in the overlays folder next to HyperwaveStation.exe (Station refreshes them every time it starts). OBS can load them straight from that folder, so they keep working with Station closed. Each overlay can also switch to a different look for each OBS scene, for example chat big and centred on Just Chatting and small in a corner on Gameplay.
+Save your layouts
+Open the designer: http://127.0.0.1:7575/chat for chat or http://127.0.0.1:7575/overlay for music. No Station? Double-click overlays\chat.html or overlays\nowplaying.html to open it in Chrome or Edge, go to the Scenes tab and click Choose overlays folder, then pick the overlays folder. Firefox can't do this, so there Save downloads the file and you move it into overlays\layouts\chat or overlays\layouts\music yourself.
+Set everything up the way you want it, including the Connect tab. Then go to the Scenes tab and click Save as starting layout. This is the look used on scenes without their own layout. It also holds your connections, so OBS needs it when it loads the overlay from the folder.
+For each scene that should look different: change the style and position, type the scene's name in Scene name exactly as it's written in OBS (with Station running, the box suggests your scene names), then click Save layout for this scene.
+To edit a layout later, click Load next to it, change it, and save it again with the same name.
+A scene layout only holds the look (style, position, animations). Your connections always come from the starting layout or your OBS link.
+Add the overlay to OBS from the folder
+In OBS: Sources → + → Browser → name it Hyperwave Chat (or Now Playing) → OK.
+OBS setting
+Value
+Local file
+ticked
+Local file (Browse)
+Hyperwave\overlays\chat.html (or nowplaying.html)
+Width / Height
+your stream size, 1920 / 1080 for most people
+Shutdown source when not visible
+unticked
+Refresh browser when scene becomes active
+unticked
+Page permissions
+Read access to user information (current Scene Collection, Transitions)
+Right-click the source → Transform → Fit to screen.
+Put the same source in your other scenes: in each scene, Sources → + → Browser → Add Existing → pick Hyperwave Chat. That way it's one overlay that changes layout as you switch scenes.
+Page permissions lets the overlay see which scene is live when OBS starts. Without it, layouts still change when you switch scenes, but the first scene after starting OBS uses the starting layout.
+Already using an overlay link from Station? It follows your scenes too, as long as Station is running. Turn it off on the Scenes tab: untick Change layout when the OBS scene changes.
 9. Hyperwave Deck (OBS, clips, chat, Stream Deck)
 Open it from the dashboard → OBS & Deck → Open the Hyperwave Deck, or go to http://127.0.0.1:7575/deck.
 Connect OBS (OBS 28 or newer)
@@ -321,6 +355,13 @@ YouTube and TikTok don't let apps change the category, so set those in YouTube S
 Phones and tablets — tick Let phones and tablets on my Wi-Fi open the deck and Save. The dashboard shows a QR code: point your phone's camera at it and the deck opens already signed in (or use Copy link and open it on your phone). Set your own deck passkey and click Save passkey, or click Generate. When Windows asks, allow Hyperwave Station on Private networks. It never works from outside your home network.
 Elgato Stream Deck — in OBS & Deck → Elgato Stream Deck, pick what the key does and click Copy link. For your own My Deck buttons, open the button in Edit; its Elgato link is at the bottom. In the Stream Deck app drag System → Website onto a key, paste the link into URL, and tick GET request in background.
 Going live and ending the stream need a 1-second press-and-hold on the deck so they can't be bumped by accident.
+9b. Keeping your setup safe
+Never share your Hyperwave folder. hyperwave-station.json and overlays\layouts\chat\default.json / overlays\layouts\music\default.json hold your passwords, passkeys and music logins. To help a friend set up, send them the Hyperwave download instead.
+Overlay links are private too. A copied overlay link can carry your Streamer.bot password or a music login. Don't show it on stream or paste it in chat or Discord.
+Only open layout files and overlay links from people you trust. Hyperwave checks everything it loads, but a scene layout from a stranger can still make your overlay look wrong.
+Use the phone deck on your home Wi-Fi. The deck talks to Station without encryption on your network. If you ever use it on shared Wi-Fi (a friend's place, an event), afterwards go to the dashboard → OBS & Deck → 4. Phones and tablets → Deck passkey and click Generate. Phones sign in again, and Elgato Stream Deck button links must be copied again.
+Keep DJ links for trusted mods. If a DJ link leaks, go to the dashboard → Remote DJ → Passkey and click Random, then send your mod the new link. Too many wrong passkeys locks the DJ page for 10 minutes.
+Mod commands (!skip, !vol, !sroff …) must be set to Permissions: Moderators only in Streamer.bot, as shown in section 5f.
 10. Troubleshooting
 Problem
 Fix
@@ -338,6 +379,10 @@ Any player: nothing shows
 Play a song, then check the dashboard's Music section. If Follow is set to one player, that player must be open. Some very old players don't talk to Windows; update them.
 Any player: the overlay shows a YouTube video instead of my music
 Dashboard → Music → Follow → pick your music player.
+Scene layout doesn't change
+The name in Scene name must match the OBS scene exactly (capitals and spaces too). Check that Change layout when the OBS scene changes is ticked, then right-click the source → Refresh.
+Overlay loaded from the overlays folder is blank or unstyled
+Save a starting layout on the Scenes tab, then right-click the OBS source → Refresh.
 YouTube Music: "isn't open"
 Open the YouTube Music app and check Plugins → API Server is enabled.
 YouTube Music: "needs you to allow Hyperwave"
