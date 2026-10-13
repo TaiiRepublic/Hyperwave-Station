@@ -1,4 +1,10 @@
 Hyperwave — changelog
+1.0.2
+A security update. Please update, especially if you use scene layouts.
+Fixed: other websites could read your saved layout files while Station was running. The starting layout holds your Streamer.bot password and music logins, so now only Station's own pages and OBS can load layouts.
+Fixed: a booby-trapped music overlay link or layout file could run code in the overlay designer. Both overlays now check every setting they load from a link or file and drop anything that isn't a real value.
+Safer: Station refuses commands from hidden frames on other websites, the deck's sound player only answers OBS and Station's own pages, and the DJ tunnel setting only accepts cloudflared itself.
+New Keeping your setup safe section in the setup guide.
 1.0.1
 Overlays that run without Station. Both overlays now come in an overlays folder next to the app, and OBS can load them straight from there as a local file. Close Hyperwave Station and they keep going: chat from Twitch and Kick (plus YouTube through Streamer.bot and TikTok through TikFinity), and your music.
 Music overlay: Last.fm and YouTube Music on their own. On the music overlay's Connect tab, Directly from Last.fm shows what any scrobbling player is playing, with album art, and Directly from YouTube Music Desktop connects to the YouTube Music app with one Allow click. Spotify Premium could already do this. Song requests, the DJ page and the deck still use Station.
