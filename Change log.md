@@ -1,4 +1,9 @@
 Hyperwave — changelog
+1.0.1
+Overlays that run without Station. Both overlays now come in an overlays folder next to the app, and OBS can load them straight from there as a local file. Close Hyperwave Station and they keep going: chat from Twitch and Kick (plus YouTube through Streamer.bot and TikTok through TikFinity), and your music.
+Music overlay: Last.fm and YouTube Music on their own. On the music overlay's Connect tab, Directly from Last.fm shows what any scrobbling player is playing, with album art, and Directly from YouTube Music Desktop connects to the YouTube Music app with one Allow click. Spotify Premium could already do this. Song requests, the DJ page and the deck still use Station.
+Scene layouts. A new Scenes tab in both overlay editors saves a look (style, position, animations) for each OBS scene as a file in overlays\layouts. When you switch scenes in OBS the overlay fades into that scene's layout by itself, no Streamer.bot needed. Scenes without a layout use your starting layout, which also carries your connections so the overlay works when OBS loads it from the folder. Without Station, the editor can save straight into the folder you pick, or download the file.
+Tips now go to StreamElements. The tip button and QR code point to the TaiiRepublic StreamElements tip page.
 1.0.0
 Hyperwave's first full release. o7
 Your own pictures on deck buttons. Upload a PNG, JPG, WebP or an animated GIF for any My Deck button, reuse pictures across buttons, and choose to show the picture only or the picture with its name.
