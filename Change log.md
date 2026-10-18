@@ -1,4 +1,14 @@
 Hyperwave — changelog
+1.1.0
+New setup walkthrough. The first time Station opens, a short guided setup takes you through everything: pick your music, type your Twitch and Kick channels, connect OBS, copy ready-made overlay links for OBS, and scan a QR code to put the deck on your phone. Each step checks that it's working (green light) before you move on, and you can skip anything you don't use. Run it again any time from Home → Run the setup walkthrough. If you already had Hyperwave set up, it won't pop up by itself.
+1.0.3
+New Home page. The dashboard now opens on Home: live tiles for your connections, music, OBS and song requests, a five-step Get set up checklist that ticks itself off as each part starts working, and shortcuts to the deck and designers.
+New Connections page. Every service Hyperwave talks to on one page, with a green, amber or grey light: your music, OBS, Streamer.bot, Twitch and Kick (sign-in and chat), YouTube, TikTok, your chat and music overlays (and whether they're live in OBS), the phone deck, the OBS sound player and Remote DJ. Each row's button takes you to where you set it up, and Quick setup at the top holds the basics: channel names, plus OBS and Streamer.bot passwords and ports.
+New Platforms tab under Connections: one card each for Twitch, Kick, YouTube, TikTok and Streamer.bot, with its own light and everything for that platform in one place: sign-in, channel name, and which chats show on the deck.
+Fixed: the music overlay used a little more memory every second it was open in OBS, so it grew through long streams. It now stays flat.
+Fixed: Kick chat stopped connecting ("App key … not in this cluster"). In October 2026 Kick started handing out its chat key per visit instead of using one fixed key. Station and the chat overlay now ask Kick for the current one each time they connect, and Kick chat keeps working even if Kick changes it again. If Kick ever refuses, the Connections page shows Kick's own reason.
+Fixed: Kick chat kept dropping with "websocket closed by server" whenever chat went quiet for a couple of minutes. Station now checks in with Kick every minute so the connection stays open, reconnects within seconds after a normal drop, and shows Kick's own reason if it ever refuses the connection. On Connections, chat that's reconnecting shows blue instead of amber.
+Fixed: the dashboard could attach its change-tracking again each time you signed out of a service or saved your Spotify Client ID.
 1.0.2
 A security update. Please update, especially if you use scene layouts.
 Fixed: other websites could read your saved layout files while Station was running. The starting layout holds your Streamer.bot password and music logins, so now only Station's own pages and OBS can load layouts.
@@ -8,7 +18,7 @@ New Keeping your setup safe section in the setup guide.
 1.0.1
 Overlays that run without Station. Both overlays now come in an overlays folder next to the app, and OBS can load them straight from there as a local file. Close Hyperwave Station and they keep going: chat from Twitch and Kick (plus YouTube through Streamer.bot and TikTok through TikFinity), and your music.
 Music overlay: Last.fm and YouTube Music on their own. On the music overlay's Connect tab, Directly from Last.fm shows what any scrobbling player is playing, with album art, and Directly from YouTube Music Desktop connects to the YouTube Music app with one Allow click. Spotify Premium could already do this. Song requests, the DJ page and the deck still use Station.
-Scene layouts. A new Scenes tab in both overlay editors saves a look (style, position, animations) for each OBS scene as a file in overlays\layouts. When you switch scenes in OBS the overlay fades into that scene's layout by itself, no Streamer.bot needed. Scenes without a layout use your starting layout, which also carries your connections so the overlay works when OBS loads it from the folder. Without Station, the editor can save straight into the folder you pick, or download the file.
+Scene layouts. A new Scenes tab in both overlay editors saves a look (style, position, animations) for each OBS scene as a file in `overlays\layouts`. When you switch scenes in OBS the overlay fades into that scene's layout by itself, no Streamer.bot needed. Scenes without a layout use your starting layout, which also carries your connections so the overlay works when OBS loads it from the folder. Without Station, the editor can save straight into the folder you pick, or download the file.
 Tips now go to StreamElements. The tip button and QR code point to the TaiiRepublic StreamElements tip page.
 1.0.0
 Hyperwave's first full release. o7
@@ -54,10 +64,11 @@ Phone sign-in is easier: the dashboard shows a QR code and a Copy link button th
 Pick your own deck passkey, or generate a random one.
 What's new on the dashboard lists every update from 0.9.7 on, and a banner tells you when you've just updated.
 Fixed: the deck page could lock you out within seconds on a phone. Its background checks were being counted as wrong passkeys.
-The Twitch app instructions now say https://localhost for the redirect URL (Twitch rejects an empty extra box).
+The Twitch app instructions now say `https://localhost` for the redirect URL (Twitch rejects an empty extra box).
 Clearer message when a music button is pressed before Spotify is connected.
+
 0.9.6
-New: Hyperwave Deck, a control panel for your stream at http://127.0.0.1:7575/deck. It works on your PC, a second monitor, or a phone or tablet on your Wi-Fi.
+New: Hyperwave Deck, a control panel for your stream at `http://127.0.0.1:7575/deck`. It works on your PC, a second monitor, or a phone or tablet on your Wi-Fi.
 OBS: switch scenes, start and stop recording, go live and end the stream (press and hold), and mute or unmute your audio sources. The scene list follows OBS automatically.
 Clips: one Clip button saves OBS's replay buffer to your PC and can also make a Twitch clip. Station can keep the replay buffer running for you.
 Chat: Twitch, Kick, YouTube and TikTok chat in one feed, with emotes and name colors. Reply to one platform or all of them, with quick-reply buttons.
@@ -66,8 +77,9 @@ Two ways to reply and clip on Twitch: sign in to Twitch inside Station (no Strea
 Phones and tablets on your Wi-Fi can open the deck with a passkey. It refuses connections from outside your home network, and locks out repeated wrong guesses.
 Elgato Stream Deck support: build a link for any deck button on the dashboard and paste it into Stream Deck's Website action with "GET request in background".
 New OBS & Deck section on the dashboard with step-by-step setup, and a Deck link in the console.
+
 0.9.5
-One download for the whole package. Hyperwave Chat is now built into HyperwaveStation.exe at http://127.0.0.1:7575/chat, with its own Hyperwave Chat section on the dashboard. No more copying chat.html into the web folder.
+One download for the whole package. Hyperwave Chat is now built into HyperwaveStation.exe at `http://127.0.0.1:7575/chat`, with its own Hyperwave Chat section on the dashboard. No more copying `chat.html` into the `web` folder.
 Music in your chat. Hyperwave Chat can show each new song ("Now playing" with album art and who requested it), every song request, and optionally DJ actions. Turn it on under Connect → Hyperwave Station. It's on automatically when the chat is opened from the app.
 The chat designer fills in your Twitch and Kick channel names from the dashboard the first time you open it, and links back to the dashboard.
 Easier chat settings: tabs (Connect, Style, Motion, Position, Filters), a settings search, a Show all options switch, one-click style cards, undo and redo, per-setting reset, a connection check that confirms real chat is arriving, and a warning when your OBS link is out of date.
