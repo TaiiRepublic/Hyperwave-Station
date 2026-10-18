@@ -1,5 +1,5 @@
 Hyperwave — Setup Guide
-Version 1.0.3. If something doesn't work, please click Send feedback in the About section at the bottom of the dashboard.
+Version 1.1.0. If something doesn't work, please click Send feedback in the About section at the bottom of the dashboard.
 Hyperwave is one small Windows app, HyperwaveStation.exe, that runs your stream's chat overlay and your music. It works with almost any music player: Spotify (Free or Premium), YouTube Music, Apple Music, a browser tab, and more. It gives you:
 Hyperwave Deck — a control panel for your stream on your PC, phone, tablet or Elgato Stream Deck: switch OBS scenes, clip, record, go live, mute, run your music, and read and reply to chat from every platform.
 Hyperwave Chat — Twitch, Kick, YouTube and TikTok chat in one OBS overlay, with emotes, 20 animations, rain and scrolling modes, bubbles, profile pictures, and new songs and song requests shown right in chat.
@@ -16,6 +16,7 @@ Copy `HyperwaveStation.exe` and the `web` folder into it.
 Double-click HyperwaveStation.exe.
 Windows may show "Windows protected your PC" because the app isn't code-signed. Click More info → Run anyway. (The full source code is in the `source` folder if you want to check or build it yourself.)
 A small console window opens and your browser opens the dashboard at `http://127.0.0.1:7575`. Keep the console window open while you stream — closing it quits the app.
+The first time, a setup walkthrough opens on the dashboard. It takes about five minutes and covers your music, your Twitch and Kick channels, OBS, the overlays and the deck on your phone, checking each one as you go. Skip any step you don't need, and run it again later from Home → Run the setup walkthrough. The rest of this guide covers every option in detail.
 > Tip: to start it with Windows, press `Win + R`, type `shell:startup`, and drop a shortcut to `HyperwaveStation.exe` in that folder.
 Home and Connections
 The dashboard opens on Home, with a Get set up checklist that ticks itself off as each part starts working. Connections, second in the left menu, shows everything Hyperwave talks to with a light next to each one:
@@ -148,7 +149,6 @@ Field	Value
 Name	`Song Request`
 Commands	`!sr` (add `!songrequest` on a new line if you like)
 Location	Start
-
 Sources	tick YouTube (tick Twitch/Kick chat too if you want `!sr` there)
 Permitted	everyone
 Cooldowns	e.g. user cooldown 60 s
@@ -303,7 +303,6 @@ Overlay loaded from the overlays folder is blank or unstyled	Save a starting lay
 YouTube Music: "isn't open"	Open the YouTube Music app and check Plugins → API Server is enabled.
 YouTube Music: "needs you to allow Hyperwave"	Click Connect YouTube Music again and choose Allow in YouTube Music.
 Last.fm: "hides its listening"	Last.fm → Settings → Privacy → untick Hide recent listening information.
-
 "Premium required" / 403	Reconnect Spotify with the Premium account that owns the developer app.
 `INVALID_CLIENT: Invalid redirect URI`	The Redirect URI in your Spotify app must be exactly `http://127.0.0.1:7575/callback` (not `localhost`).
 Streamer.bot says "music system is offline"	HyperwaveStation.exe isn't running, or you changed its port (edit `STATION` at the top of the `.cs`).
