@@ -1,11 +1,12 @@
 Hyperwave
 Free stream tools by TaiiRepublic: multichat overlay, now playing overlay with song requests, and a stream deck for your PC, phone or Elgato Stream Deck. Works with Twitch, Kick, YouTube and TikTok, and with almost any music player.
 ⬇ Download
-Download the latest Hyperwave (Windows)
-This link always gives you the newest version. Release notes for every version are on the Releases page.
+Easiest: download the Hyperwave Updater and double-click it. It installs Hyperwave in `C:\Hyperwave` with a desktop shortcut, or updates the Hyperwave you already have. Windows may say "Windows protected your PC" because the app isn't code-signed: click More info → Run anyway.
+Prefer the zip? Download the latest Hyperwave (Windows)
+Both links always give you the newest version. Release notes for every version are on the Releases page.
 Already using Hyperwave?
 Version 1.1.5 or newer: you'll get a card on the dashboard when an update is out. Click Update now and you're done.
-Older version: update by hand once (about a minute). Download the zip above, close Hyperwave Station, extract the zip and copy everything in the `Hyperwave` folder over your Hyperwave folder (choose Replace the files in the destination; skip `web\about.json` if you edited it). Your settings, deck buttons, sounds and layouts stay. Start `HyperwaveStation.exe` and future updates are one click.
+Older version: run the Hyperwave Updater once. It finds your Hyperwave, updates it and keeps your settings, deck buttons, sounds and layouts. After that, updates are one click on the dashboard.
 ---
 Hyperwave — Setup Guide
 Version 1.1.5. If something doesn't work, please click Send feedback in the About section at the bottom of the dashboard.
@@ -32,7 +33,13 @@ On 1.1.5 or newer (one click): Station checks GitHub when it starts and every fe
 Click What's new to read the changes.
 Click Update now. Station downloads the update, checks it hasn't been changed or damaged, installs it and restarts in a new window. The dashboard reloads by itself on the new version.
 Updating keeps everything that's yours: settings and sign-ins (`hyperwave-station.json`), deck pictures and sounds (`hyperwave-media`), scene layouts (`overlays\layouts`) and your `web\about.json`. You can turn update checks off, or check right away, under Home → Updates. If you're live, Station asks first, because it restarts for a few seconds.
-On an older version (before 1.1.5), update by hand once:
+On an older version (before 1.1.5), the easy way:
+Download HyperwaveUpdater.exe: https://github.com/TaiiRepublic/hyperwave-station/releases/latest/download/HyperwaveUpdater.exe
+Double-click it. If Windows shows "Windows protected your PC", click More info → Run anyway (it isn't code-signed, like Station itself).
+It finds your Hyperwave folder and asks Update it? [Y/n]. Press Enter. If it finds more than one, type the number of the one you use. If it can't find yours, paste the folder that has `HyperwaveStation.exe` in it.
+It closes Hyperwave Station, downloads and checks the newest version, installs it (keeping your settings, sign-ins, deck buttons, sounds, layouts and About file) and starts Station again. From then on, updates are one click on the dashboard.
+Installing on a new PC: run the same HyperwaveUpdater.exe. When it doesn't find Hyperwave, press Enter to install it in `C:\Hyperwave`. It adds a Hyperwave Station shortcut to your desktop and starts it.
+Or update by hand once:
 Download the newest version: https://github.com/TaiiRepublic/hyperwave-station/releases/latest/download/Hyperwave.zip
 Close the Hyperwave Station window.
 Right-click the downloaded `Hyperwave.zip` → Extract All…, then open the extracted `Hyperwave` folder.
