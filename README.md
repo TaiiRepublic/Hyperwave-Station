@@ -1,5 +1,14 @@
+Hyperwave
+Free stream tools by TaiiRepublic: multichat overlay, now playing overlay with song requests, and a stream deck for your PC, phone or Elgato Stream Deck. Works with Twitch, Kick, YouTube and TikTok, and with almost any music player.
+⬇ Download
+Download the latest Hyperwave (Windows)
+This link always gives you the newest version. Release notes for every version are on the Releases page.
+Already using Hyperwave?
+Version 1.1.5 or newer: you'll get a card on the dashboard when an update is out. Click Update now and you're done.
+Older version: update by hand once (about a minute). Download the zip above, close Hyperwave Station, extract the zip and copy everything in the `Hyperwave` folder over your Hyperwave folder (choose Replace the files in the destination; skip `web\about.json` if you edited it). Your settings, deck buttons, sounds and layouts stay. Start `HyperwaveStation.exe` and future updates are one click.
+---
 Hyperwave — Setup Guide
-Version 1.1.0. If something doesn't work, please click Send feedback in the About section at the bottom of the dashboard.
+Version 1.1.5. If something doesn't work, please click Send feedback in the About section at the bottom of the dashboard.
 Hyperwave is one small Windows app, HyperwaveStation.exe, that runs your stream's chat overlay and your music. It works with almost any music player: Spotify (Free or Premium), YouTube Music, Apple Music, a browser tab, and more. It gives you:
 Hyperwave Deck — a control panel for your stream on your PC, phone, tablet or Elgato Stream Deck: switch OBS scenes, clip, record, go live, mute, run your music, and read and reply to chat from every platform.
 Hyperwave Chat — Twitch, Kick, YouTube and TikTok chat in one OBS overlay, with emotes, 20 animations, rain and scrolling modes, bubbles, profile pictures, and new songs and song requests shown right in chat.
@@ -18,6 +27,19 @@ Windows may show "Windows protected your PC" because the app isn't code-signed. 
 A small console window opens and your browser opens the dashboard at `http://127.0.0.1:7575`. Keep the console window open while you stream — closing it quits the app.
 The first time, a setup walkthrough opens on the dashboard. It takes about five minutes and covers your music, your Twitch and Kick channels, OBS, the overlays and the deck on your phone, checking each one as you go. Skip any step you don't need, and run it again later from Home → Run the setup walkthrough. The rest of this guide covers every option in detail.
 > Tip: to start it with Windows, press `Win + R`, type `shell:startup`, and drop a shortcut to `HyperwaveStation.exe` in that folder.
+Updating Hyperwave
+On 1.1.5 or newer (one click): Station checks GitHub when it starts and every few hours. When a new version is out, a card appears at the top of the dashboard:
+Click What's new to read the changes.
+Click Update now. Station downloads the update, checks it hasn't been changed or damaged, installs it and restarts in a new window. The dashboard reloads by itself on the new version.
+Updating keeps everything that's yours: settings and sign-ins (`hyperwave-station.json`), deck pictures and sounds (`hyperwave-media`), scene layouts (`overlays\layouts`) and your `web\about.json`. You can turn update checks off, or check right away, under Home → Updates. If you're live, Station asks first, because it restarts for a few seconds.
+On an older version (before 1.1.5), update by hand once:
+Download the newest version: https://github.com/TaiiRepublic/hyperwave-station/releases/latest/download/Hyperwave.zip
+Close the Hyperwave Station window.
+Right-click the downloaded `Hyperwave.zip` → Extract All…, then open the extracted `Hyperwave` folder.
+Select everything inside it and copy it into your Hyperwave folder (the one with `HyperwaveStation.exe`). When Windows asks, choose Replace the files in the destination.
+Your settings, sign-ins, deck buttons, sounds and layouts are in files the download doesn't include, so they stay as they are. If you edited `web\about.json`, keep your copy: when Windows asks about that one file, choose Skip this file.
+Start `HyperwaveStation.exe`. From now on, updates are one click.
+If an update ever won't start: in your Hyperwave folder, delete `HyperwaveStation.exe` and rename `HyperwaveStation.old.exe` back to `HyperwaveStation.exe` to return to the version you had. (The old copy is removed about 30 seconds after a successful update.)
 Home and Connections
 The dashboard opens on Home, with a Get set up checklist that ticks itself off as each part starts working. Connections, second in the left menu, shows everything Hyperwave talks to with a light next to each one:
 Light	Meaning
