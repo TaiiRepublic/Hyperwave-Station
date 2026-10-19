@@ -1,4 +1,8 @@
 Hyperwave — changelog
+1.1.5
+One-click updates. Station now checks GitHub for new versions when it starts and every few hours. When one is out, a card at the top of the dashboard shows what's new with an Update now button: Station downloads it, makes sure it hasn't been changed or damaged (it checks the file's SHA-256 fingerprint), installs it and restarts by itself. Your settings, sign-ins, deck buttons, sounds, layouts and About file are never touched. Turn checks off, or check right away, under Home → Updates. If you're live, it asks first.
+One download link that's always the newest version: https://github.com/TaiiRepublic/hyperwave-station/releases/latest/download/Hyperwave.zip
+Updating from an older version? See Updating Hyperwave in the setup guide for the one-time manual steps.
 1.1.0
 New setup walkthrough. The first time Station opens, a short guided setup takes you through everything: pick your music, type your Twitch and Kick channels, connect OBS, copy ready-made overlay links for OBS, and scan a QR code to put the deck on your phone. Each step checks that it's working (green light) before you move on, and you can skip anything you don't use. Run it again any time from Home → Run the setup walkthrough. If you already had Hyperwave set up, it won't pop up by itself.
 1.0.3
