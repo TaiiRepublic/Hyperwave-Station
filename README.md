@@ -9,7 +9,7 @@ Version 1.1.5 or newer: you'll get a card on the dashboard when an update is out
 Older version: run the Hyperwave Updater once. It finds your Hyperwave, updates it and keeps your settings, deck buttons, sounds and layouts. After that, updates are one click on the dashboard.
 ---
 Hyperwave — Setup Guide
-Version 1.1.5. If something doesn't work, please click Send feedback in the About section at the bottom of the dashboard.
+Version 1.2.0. If something doesn't work, please click Send feedback in the About section at the bottom of the dashboard.
 Hyperwave is one small Windows app, HyperwaveStation.exe, that runs your stream's chat overlay and your music. It works with almost any music player: Spotify (Free or Premium), YouTube Music, Apple Music, a browser tab, and more. It gives you:
 Hyperwave Deck — a control panel for your stream on your PC, phone, tablet or Elgato Stream Deck: switch OBS scenes, clip, record, go live, mute, run your music, and read and reply to chat from every platform.
 Hyperwave Chat — Twitch, Kick, YouTube and TikTok chat in one OBS overlay, with emotes, 20 animations, rain and scrolling modes, bubbles, profile pictures, and new songs and song requests shown right in chat.
@@ -26,29 +26,37 @@ Copy `HyperwaveStation.exe` and the `web` folder into it.
 Double-click HyperwaveStation.exe.
 Windows may show "Windows protected your PC" because the app isn't code-signed. Click More info → Run anyway. (The full source code is in the `source` folder if you want to check or build it yourself.)
 A small console window opens and your browser opens the dashboard at `http://127.0.0.1:7575`. Keep the console window open while you stream — closing it quits the app.
-The first time, a setup walkthrough opens on the dashboard. It takes about five minutes and covers your music, your Twitch and Kick channels, OBS, the overlays and the deck on your phone, checking each one as you go. Skip any step you don't need, and run it again later from Home → Run the setup walkthrough. The rest of this guide covers every option in detail.
+The first time, a setup walkthrough opens on the dashboard. It takes about five minutes and covers your music, your Twitch and Kick channels, OBS, the overlays and the deck on your phone, checking each one as you go. Skip any step you don't need, and run it again later from Command Center → Run the setup walkthrough. The rest of this guide covers every option in detail.
 > Tip: to start it with Windows, press `Win + R`, type `shell:startup`, and drop a shortcut to `HyperwaveStation.exe` in that folder.
 Updating Hyperwave
+Are you up to date? On 1.2.0 or newer, the top of the dashboard's left menu tells you: green ✓ You're up to date, or red Click to download latest release when a new version is out.
 On 1.1.5 or newer (one click): Station checks GitHub when it starts and every few hours. When a new version is out, a card appears at the top of the dashboard:
-Click What's new to read the changes.
+Read What's new on the card to see what changed.
 Click Update now. Station downloads the update, checks it hasn't been changed or damaged, installs it and restarts in a new window. The dashboard reloads by itself on the new version.
-Updating keeps everything that's yours: settings and sign-ins (`hyperwave-station.json`), deck pictures and sounds (`hyperwave-media`), scene layouts (`overlays\layouts`) and your `web\about.json`. You can turn update checks off, or check right away, under Home → Updates. If you're live, Station asks first, because it restarts for a few seconds.
+Updating keeps everything that's yours: settings and sign-ins (`hyperwave-station.json`), deck pictures and sounds (`hyperwave-media`), and scene layouts (`overlays\layouts`). You can turn update checks off, or check right away, under Command Center → Updates. If you're live, Station asks first, because it restarts for a few seconds.
 On an older version (before 1.1.5), the easy way:
 Download HyperwaveUpdater.exe: https://github.com/TaiiRepublic/hyperwave-station/releases/latest/download/HyperwaveUpdater.exe
 Double-click it. If Windows shows "Windows protected your PC", click More info → Run anyway (it isn't code-signed, like Station itself).
 It finds your Hyperwave folder and asks Update it? [Y/n]. Press Enter. If it finds more than one, type the number of the one you use. If it can't find yours, paste the folder that has `HyperwaveStation.exe` in it.
-It closes Hyperwave Station, downloads and checks the newest version, installs it (keeping your settings, sign-ins, deck buttons, sounds, layouts and About file) and starts Station again. From then on, updates are one click on the dashboard.
+It closes Hyperwave Station, downloads and checks the newest version, installs it (keeping your settings, sign-ins, deck buttons, sounds and layouts) and starts Station again. From then on, updates are one click on the dashboard.
 Installing on a new PC: run the same HyperwaveUpdater.exe. When it doesn't find Hyperwave, press Enter to install it in `C:\Hyperwave`. It adds a Hyperwave Station shortcut to your desktop and starts it.
 Or update by hand once:
 Download the newest version: https://github.com/TaiiRepublic/hyperwave-station/releases/latest/download/Hyperwave.zip
 Close the Hyperwave Station window.
 Right-click the downloaded `Hyperwave.zip` → Extract All…, then open the extracted `Hyperwave` folder.
 Select everything inside it and copy it into your Hyperwave folder (the one with `HyperwaveStation.exe`). When Windows asks, choose Replace the files in the destination.
-Your settings, sign-ins, deck buttons, sounds and layouts are in files the download doesn't include, so they stay as they are. If you edited `web\about.json`, keep your copy: when Windows asks about that one file, choose Skip this file.
+Your settings, sign-ins, deck buttons, sounds and layouts are in files the download doesn't include, so they stay as they are.
 Start `HyperwaveStation.exe`. From now on, updates are one click.
+Moving to a new PC? Save a backup first (see Backup and restore below), install Hyperwave on the new PC with the Updater, then restore the backup there.
 If an update ever won't start: in your Hyperwave folder, delete `HyperwaveStation.exe` and rename `HyperwaveStation.old.exe` back to `HyperwaveStation.exe` to return to the version you had. (The old copy is removed about 30 seconds after a successful update.)
-Home and Connections
-The dashboard opens on Home, with a Get set up checklist that ticks itself off as each part starts working. Connections, second in the left menu, shows everything Hyperwave talks to with a light next to each one:
+Backup and restore
+Command Center → Backup and restore keeps your whole setup in one file: settings and sign-ins, deck buttons, pictures and sounds, and scene layouts.
+Save a backup downloads `Hyperwave-backup-<date>.zip`. Keep it somewhere safe, like a USB stick or cloud drive. It holds your passwords and sign-ins, so don't share it.
+Restore from a backup…: pick a backup file and click OK. Station first saves what you have now in the `backups` folder (as `before-restore-<date and time>.zip`), then puts the backup in place and restarts. The dashboard reloads by itself.
+To undo a restore, restore the `before-restore` file from the `backups` folder.
+Restoring adds back the pictures, sounds and layouts in the backup. Ones you added since are kept.
+Command Center and Connections
+The dashboard opens on the Command Center, with a Get set up checklist that ticks itself off as each part starts working. Connections, second in the left menu, shows everything Hyperwave talks to with a light next to each one:
 Light	Meaning
 Green	Connected and working
 Amber	Turned on but not working yet. Click the row's button to fix it
@@ -311,6 +319,7 @@ Going live and ending the stream need a 1-second press-and-hold on the deck so t
 ---
 9b. Keeping your setup safe
 Never share your Hyperwave folder. `hyperwave-station.json` and `overlays\layouts\chat\default.json` / `overlays\layouts\music\default.json` hold your passwords, passkeys and music logins. To help a friend set up, send them the Hyperwave download instead.
+Backups are private too. A `Hyperwave-backup-….zip` (and the files in the `backups` folder) holds the same passwords and sign-ins. Keep them to yourself.
 Overlay links are private too. A copied overlay link can carry your Streamer.bot password or a music login. Don't show it on stream or paste it in chat or Discord.
 Only open layout files and overlay links from people you trust. Hyperwave checks everything it loads, but a scene layout from a stranger can still make your overlay look wrong.
 Use the phone deck on your home Wi-Fi. The deck talks to Station without encryption on your network. If you ever use it on shared Wi-Fi (a friend's place, an event), afterwards go to the dashboard → OBS & Deck → 4. Phones and tablets → Deck passkey and click Generate. Phones sign in again, and Elgato Stream Deck button links must be copied again.
@@ -318,6 +327,7 @@ Keep DJ links for trusted mods. If a DJ link leaks, go to the dashboard → Remo
 Mod commands (`!skip`, `!vol`, `!sroff` …) must be set to Permissions: Moderators only in Streamer.bot, as shown in section 5f.
 ---
 10. Troubleshooting
+Asking for help? Go to Command Center → Getting help and click Copy diagnostics, then paste it in your message. It has your version, what's connected and the last 50 console lines, with passwords, keys, sign-ins and your Windows user name taken out.
 Problem	Fix
 Deck sounds aren't heard	Dashboard → OBS & Deck → Sounds → Add the sound player to all my OBS scenes, then Play a test beep. In OBS the Hyperwave Sounds source must be in the scene you're on.
 "Twitch needs permission to change your category"	Dashboard → Connections → Platforms → Twitch → Sign in again and approve.
@@ -336,6 +346,8 @@ Last.fm: "hides its listening"	Last.fm → Settings → Privacy → untick Hide 
 `INVALID_CLIENT: Invalid redirect URI`	The Redirect URI in your Spotify app must be exactly `http://127.0.0.1:7575/callback` (not `localhost`).
 Streamer.bot says "music system is offline"	HyperwaveStation.exe isn't running, or you changed its port (edit `STATION` at the top of the `.cs`).
 Request queued twice	An old song request action still has the same trigger, or Commands without a bot is on alongside Streamer.bot.
+Left menu shows red Click to download latest release	A new version is out. Click Update now on the card at the top of the dashboard, or click the red link to download it from GitHub.
+Restore says "that file isn't a Hyperwave backup"	Pick the `Hyperwave-backup-….zip` you saved, not the Hyperwave download.
 "Port 7575 is busy"	The app is already running (check the taskbar).
 Mod sees "DJ access is closed"	Click Open DJ access (or tick auto-open). Their page connects by itself.
 Mod gets "That passkey didn't work"	You changed the passkey. Send them the new one; it's case-sensitive.
@@ -357,7 +369,7 @@ Player not open	`@{user} the fleet radio is offline right now.`
 `!song`	`🛰️ Now playing on fleet comms: {title} by {artist}{req}`
 ---
 For package maintainers: the About section
-The About section at the bottom of the dashboard reads `web\about.json`. Edit it in Notepad (no rebuild needed) and reload the dashboard. Leave a link as `""` to hide its button.
+The About section at the bottom of the dashboard reads `web\about.json`. Edit it in Notepad (no rebuild needed) and reload the dashboard. Leave a link as `""` to hide its button. Updates replace `web\about.json`, so keep a copy of your edits and put it back after updating.
 Field	What it is
 `about`	The paragraph shown
 `tip` / `tipLabel` / `tipQr`	Tip link, its button text, and the QR image file in `web\`
